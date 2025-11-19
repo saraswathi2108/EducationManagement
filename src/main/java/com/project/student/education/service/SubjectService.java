@@ -207,7 +207,6 @@ public class SubjectService {
 
     public String assignTeacherToSubject(AssignSubjectTeacherDTO dto) {
 
-        // prevent duplicate assignment
         if (classSubjectMapping.existsByClassSection_ClassSectionIdAndSubject_SubjectId(
                 dto.getClassSectionId(), dto.getSubjectId()
         )) {

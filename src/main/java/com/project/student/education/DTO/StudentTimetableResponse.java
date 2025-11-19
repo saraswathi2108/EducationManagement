@@ -15,11 +15,10 @@ public class StudentTimetableResponse {
 
     private ClassSectionMiniDTO classSection;   // className, section, academicYear
 
-    private TeacherMiniDTO classTeacher;        // only id + name
+    private TeacherMiniDTO classTeacher;
 
-    private List<StudentSubjectTimetableDTO> subjects; // each subject with teacher + periods
-
-    private List<TimetableMiniDTO> todayTimetable;     // only today's entries
+    private List<StudentSubjectTimetableDTO> subjects;
+    private List<TimetableMiniDTO> todayTimetable;
 
     private List<WeeklyTimetableDTO> fullWeekTimetable; // grouped by day
 }

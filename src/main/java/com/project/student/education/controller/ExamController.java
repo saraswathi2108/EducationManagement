@@ -55,6 +55,7 @@ public class ExamController {
         return ResponseEntity.ok(schedulingService.scheduleBulk(req));
     }
 
+
     @GetMapping("/{examId}/timetable/{classSectionId}")
     public ResponseEntity<List<TimetableDayDTO>> getTimetable(
             @PathVariable String examId,

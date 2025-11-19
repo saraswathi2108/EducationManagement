@@ -75,11 +75,23 @@ public class AssignmentService {
     }
 
     private AssignmentDTO toDTO(Assignment a) {
-        AssignmentDTO d = modelMapper.map(a, AssignmentDTO.class);
-        d.setAssignmentId(a.getId().getAssignmentId());
-        d.setSubjectId(a.getId().getSubjectId());
-        return d;
+        return AssignmentDTO.builder()
+                .assignmentId(a.getId().getAssignmentId())
+                .subjectId(a.getId().getSubjectId())
+                .title(a.getTitle())
+                .description(a.getDescription())
+                .createdBy(a.getTeacher() != null ? a.getTeacher().getTeacherName() : a.getCreatedBy())
+                .assignedTo(a.getClassSection() != null
+                        ? a.getClassSection().getClassName() + a.getClassSection().getSection()
+                        : a.getAssignedTo())
+                .status(a.getStatus())
+                .priority(a.getPriority())
+                .assignedDate(a.getAssignedDate())
+                .dueDate(a.getDueDate())
+                .attachedFiles(a.getAttachedFiles())
+                .build();
     }
+
 
     public AssignmentDTO updateAssignment(String subjectId, String assignmentId, AssignmentDTO assignmentDTO) {
         Assignment assignment = assignmentRepository.findById(new AssignmentId(assignmentId, subjectId))

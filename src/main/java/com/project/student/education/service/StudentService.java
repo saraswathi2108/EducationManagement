@@ -196,61 +196,61 @@ public class StudentService {
         return result;
     }
 
-
-    public StudentTimetableResponse getStudentTimetable(String studentId) {
-
-        Student student = studentRepository.findById(studentId)
-                .orElseThrow(() -> new RuntimeException("Student not found"));
-
-        ClassSection cs = student.getClassSection();
-
-        String today = LocalDate.now().getDayOfWeek().name().substring(0, 3);
-
-
-        List<Timetable> todayList =
-                timetableRepository.findByClassSection_ClassSectionIdAndDay(
-                        cs.getClassSectionId(),
-                        today
-                );
-
-        List<Timetable> fullWeek =
-                timetableRepository.findByClassSection_ClassSectionIdOrderByDayAscStartTimeAsc(
-                        cs.getClassSectionId()
-                );
-
-        StudentTimetableResponse response = new StudentTimetableResponse();
-        response.setStudentId(student.getStudentId());
-        response.setStudentName(student.getFullName());
-
-        response.setClassSection(
-                new ClassSectionMiniDTO(
-                        cs.getClassSectionId(),
-                        cs.getClassName(),
-                        cs.getSection(),
-                        cs.getAcademicYear()
-                )
-        );
-
-        if (cs.getClassTeacher() != null) {
-            Teacher t = cs.getClassTeacher();
-            response.setClassTeacher(
-                    new TeacherMiniDTO(t.getTeacherId(), t.getTeacherName())
-            );
-        }
-
-        // Subject grouping (subject → periods)
-        response.setSubjects(buildSubjectWise(fullWeek));
-
-        // Today's Timetable
-        response.setTodayTimetable(
-                todayList.stream().map(this::mapMini).toList()
-        );
-
-        // Weekly Timetable (grouped by days)
-        response.setFullWeekTimetable(buildWeekly(fullWeek));
-
-        return response;
-    }
+//
+//    public StudentTimetableResponse getStudentTimetable(String studentId) {
+//
+//        Student student = studentRepository.findById(studentId)
+//                .orElseThrow(() -> new RuntimeException("Student not found"));
+//
+//        ClassSection cs = student.getClassSection();
+//
+//        String today = LocalDate.now().getDayOfWeek().name().substring(0, 3);
+//
+//
+//        List<Timetable> todayList =
+//                timetableRepository.findByClassSection_ClassSectionIdAndDay(
+//                        cs.getClassSectionId(),
+//                        today
+//                );
+//
+//        List<Timetable> fullWeek =
+//                timetableRepository.findByClassSection_ClassSectionIdOrderByDayAscStartTimeAsc(
+//                        cs.getClassSectionId()
+//                );
+//
+//        StudentTimetableResponse response = new StudentTimetableResponse();
+//        response.setStudentId(student.getStudentId());
+//        response.setStudentName(student.getFullName());
+//
+//        response.setClassSection(
+//                new ClassSectionMiniDTO(
+//                        cs.getClassSectionId(),
+//                        cs.getClassName(),
+//                        cs.getSection(),
+//                        cs.getAcademicYear()
+//                )
+//        );
+//
+//        if (cs.getClassTeacher() != null) {
+//            Teacher t = cs.getClassTeacher();
+//            response.setClassTeacher(
+//                    new TeacherMiniDTO(t.getTeacherId(), t.getTeacherName())
+//            );
+//        }
+//
+//        // Subject grouping (subject → periods)
+//        response.setSubjects(buildSubjectWise(fullWeek));
+//
+//        // Today's Timetable
+//        response.setTodayTimetable(
+//                todayList.stream().map(this::mapMini).toList()
+//        );
+//
+//        // Weekly Timetable (grouped by days)
+//        response.setFullWeekTimetable(buildWeekly(fullWeek));
+//
+//        return response;
+//    }
 
     private TimetableMiniDTO mapMini(Timetable t) {
         return new TimetableMiniDTO(
@@ -291,6 +291,7 @@ public class StudentService {
 
         return new ArrayList<>(map.values());
     }
+
     private List<WeeklyTimetableDTO> buildWeekly(List<Timetable> list) {
 
         Map<String, WeeklyTimetableDTO> map = new LinkedHashMap<>();
@@ -367,4 +368,142 @@ public class StudentService {
         }
     }
 
+    public void updateWeeklyTimeTable(CreateTimetableRequest request) {
+
+        // 1️⃣ Validate Class Section
+        ClassSection classSection = classSectionRepository.findById(request.getClassSectionId())
+                .orElseThrow(() -> new RuntimeException("Invalid class section"));
+
+        // 2️⃣ Delete Existing Timetable for This Class
+        List<Timetable> existing = timetableRepository
+                .findByClassSection_ClassSectionId(request.getClassSectionId());
+
+        timetableRepository.deleteAll(existing);
+
+        // 3️⃣ Re-Insert Updated Timetable Periods
+        for (CreateTimetableRequest.PeriodRequest p : request.getPeriods()) {
+
+            Subject subject = subjectRepository.findById(p.getSubjectId())
+                    .orElseThrow(() -> new RuntimeException("Invalid subject"));
+
+            Teacher teacher = teacherRepository.findById(p.getTeacherId())
+                    .orElseThrow(() -> new RuntimeException("Invalid teacher"));
+
+            // 🔥 Check Teacher Conflict
+            boolean teacherBusy =
+                    timetableRepository.existsByTeacher_TeacherIdAndDayAndStartTimeAndEndTime(
+                            p.getTeacherId(),
+                            p.getDay(),
+                            p.getStartTime(),
+                            p.getEndTime()
+                    );
+
+            if (teacherBusy) {
+                throw new RuntimeException(
+                        "Teacher " + teacher.getTeacherName() +
+                                " is already assigned at " + p.getDay() + " " + p.getStartTime()
+                );
+            }
+
+            // 4️⃣ Save new timetable period
+            Timetable t = Timetable.builder()
+                    .id(idGenerator.generateId("T"))
+                    .classSection(classSection)
+                    .subject(subject)
+                    .teacher(teacher)
+                    .day(p.getDay())
+                    .startTime(p.getStartTime())
+                    .endTime(p.getEndTime())
+                    .build();
+
+            timetableRepository.save(t);
+        }
+    }
+
+    public StudentWeeklyTimetableDTO getStudentWeeklyTimetableWithDates(String studentId, LocalDate weekReference) {
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        ClassSection cs = student.getClassSection();
+        if (cs == null) throw new RuntimeException("Student has no class section assigned");
+
+        List<Timetable> classTimetable = timetableRepository
+                .findByClassSection_ClassSectionIdOrderByDayAscStartTimeAsc(cs.getClassSectionId());
+
+        Map<String, LocalDate> weekDates = getWeekDates(weekReference);
+
+        Map<String, List<Timetable>> grouped = classTimetable.stream()
+                .collect(Collectors.groupingBy(Timetable::getDay, LinkedHashMap::new, Collectors.toList()));
+
+        List<StudentWeeklyTimetableDTO.DayEntry> days = new ArrayList<>();
+
+        for (String dayName : List.of(
+                "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY",
+                "FRIDAY", "SATURDAY", "SUNDAY"
+        )) {
+
+            LocalDate date = weekDates.get(dayName);
+
+            List<Timetable> periods = grouped.getOrDefault(dayName, Collections.emptyList());
+
+            List<StudentWeeklyTimetableDTO.Period> periodDTOs = periods.stream()
+                    .sorted(Comparator.comparing(Timetable::getStartTime))
+                    .map(t -> {
+                        StudentWeeklyTimetableDTO.Period p = new StudentWeeklyTimetableDTO.Period();
+                        p.setStartTime(toAmPm(t.getStartTime()));   // ⬅ AM/PM
+                        p.setEndTime(toAmPm(t.getEndTime()));       // ⬅ AM/PM
+                        p.setSubjectId(t.getSubject().getSubjectId());
+                        p.setSubjectName(t.getSubject().getSubjectName());
+                        p.setTeacherId(t.getTeacher().getTeacherId());
+                        p.setTeacherName(t.getTeacher().getTeacherName());
+                        return p;
+                    }).collect(Collectors.toList());
+
+            StudentWeeklyTimetableDTO.DayEntry de = new StudentWeeklyTimetableDTO.DayEntry();
+            de.setDay(dayName);
+            de.setDate(date != null ? date.toString() : null);
+            de.setPeriods(periodDTOs);
+
+            days.add(de);
+        }
+
+        return StudentWeeklyTimetableDTO.builder()
+                .studentId(student.getStudentId())
+                .studentName(student.getFullName())
+                .classSectionId(cs.getClassSectionId())
+                .classSection(new ClassSectionMiniDTO(
+                        cs.getClassSectionId(), cs.getClassName(), cs.getSection(), cs.getAcademicYear()
+                ))
+                .classTeacher(
+                        cs.getClassTeacher() != null ?
+                                new TeacherMiniDTO(
+                                        cs.getClassTeacher().getTeacherId(),
+                                        cs.getClassTeacher().getTeacherName()
+                                )
+                                : null
+                )
+                .weeklyTimetable(days)
+                .build();
+    }
+    private Map<String, LocalDate> getWeekDates(LocalDate referenceDate) {
+        LocalDate monday = referenceDate.with(java.time.DayOfWeek.MONDAY);
+
+        Map<String, LocalDate> map = new LinkedHashMap<>();
+        map.put("MONDAY", monday);
+        map.put("TUESDAY", monday.plusDays(1));
+        map.put("WEDNESDAY", monday.plusDays(2));
+        map.put("THURSDAY", monday.plusDays(3));
+        map.put("FRIDAY", monday.plusDays(4));
+        map.put("SATURDAY", monday.plusDays(5));
+        map.put("SUNDAY", monday.plusDays(6));
+        return map;
+    }
+
+    private String toAmPm(String time) {
+        if (time == null) return null;
+
+        return java.time.LocalTime.parse(time)
+                .format(java.time.format.DateTimeFormatter.ofPattern("hh:mm a"));
+    }
 }

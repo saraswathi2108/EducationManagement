@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 public class CreateTimetableRequest {
 
-    private String classSectionId;   // CLS2025001
+    private String classSectionId;
 
     private List<PeriodRequest> periods;
 
@@ -22,7 +22,7 @@ public class CreateTimetableRequest {
     @Builder
     public static class PeriodRequest {
 
-        private String day;           // MON, TUE, WED, THU, FRI, SAT
+        private String day;
         private String subjectId;     // SUB2025002
         private String teacherId;     // TCH2025001
         private String startTime;     // "09:00"

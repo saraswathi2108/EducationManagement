@@ -27,14 +27,14 @@ public class SubjectController {
     @Autowired
     private StudentService studentService;
 
-    @PostMapping("subject/createSubject")
+    @PostMapping("/createSubject")
     public ResponseEntity<SubjectDTO> createSubject(@RequestBody SubjectDTO subject){
 
     SubjectDTO subjectDTO=subjectService.createSubject(subject);
     return new ResponseEntity<>(subjectDTO, HttpStatus.CREATED);
     }
 
-    @PutMapping("subject/{subjectId}")
+    @PutMapping("/{subjectId}")
     public ResponseEntity<SubjectDTO> updateSubject(
             @PathVariable String subjectId,
             @RequestBody SubjectDTO subjectDTO) {
@@ -42,13 +42,13 @@ public class SubjectController {
         return ResponseEntity.ok(updatedSubject);
     }
 
-    @GetMapping("subject/allSubjects")
+    @GetMapping("/allSubjects")
     public ResponseEntity<List<SubjectDTO>> getAllSubjects() {
         List<SubjectDTO> subjects = subjectService.getAllSubjects();
         return ResponseEntity.ok(subjects);
     }
 
-    @GetMapping("subject/{subjectId}")
+    @GetMapping("/{subjectId}")
     public ResponseEntity<SubjectDTO> getSubject(@PathVariable String subjectId) {
         SubjectDTO subjectDTO=subjectService.getSubjectById(subjectId);
         return  ResponseEntity.ok(subjectDTO);
@@ -57,7 +57,7 @@ public class SubjectController {
 
 
 
-    @DeleteMapping("subject/{subjectId}")
+    @DeleteMapping("/{subjectId}")
     public ResponseEntity<Void> deleteSubject(@PathVariable String subjectId) {
         subjectService.deleteSubject(subjectId);
         return ResponseEntity.noContent().build();
