@@ -58,9 +58,7 @@ public class AssignmentSubmissionService {
         return "Assignment submitted successfully";
     }
 
-    /**
-     * 👩‍🏫 Teacher reviews submission (update existing)
-     */
+
     public String reviewSubmission(String assignmentId, String subjectId, Long submissionNumber, AssignmentSubmissionDTO dto) {
         log.info("Reviewing submission {} for assignment {}-{}", submissionNumber, assignmentId, subjectId);
 
@@ -78,9 +76,7 @@ public class AssignmentSubmissionService {
         return "Submission reviewed successfully";
     }
 
-    /**
-     * 👩‍🏫 Get all submissions for an assignment
-     */
+
     public List<AssignmentSubmissionDTO> getSubmissions(String assignmentId, String subjectId) {
         log.info("Fetching submissions for assignment {}-{}", assignmentId, subjectId);
         return submissionRepository.findAll().stream()
@@ -90,9 +86,6 @@ public class AssignmentSubmissionService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 🧑‍🎓 Get all submissions by student
-     */
     public List<AssignmentSubmissionDTO> getSubmissionsByStudent(String studentId) {
         log.info("Fetching submissions by student {}", studentId);
         return submissionRepository.findByStudentId(studentId)
@@ -100,10 +93,20 @@ public class AssignmentSubmissionService {
     }
 
     private AssignmentSubmissionDTO toDTO(AssignmentSubmission submission) {
-        AssignmentSubmissionDTO dto = modelMapper.map(submission, AssignmentSubmissionDTO.class);
-        dto.setAssignmentId(submission.getAssignment().getId().getAssignmentId());
-        dto.setSubjectId(submission.getAssignment().getId().getSubjectId());
-        dto.setSubmissionNumber(submission.getId().getSubmissionNumber());
-        return dto;
+
+        return AssignmentSubmissionDTO.builder()
+                .assignmentId(submission.getAssignment().getId().getAssignmentId())
+                .subjectId(submission.getAssignment().getId().getSubjectId())
+                .submissionNumber(submission.getId().getSubmissionNumber())
+                .studentId(submission.getStudentId())
+                .note(submission.getNote())
+                .relatedLinks(submission.getRelatedLinks())
+                .relatedFileLinks(submission.getRelatedFileLinks())
+                .status(submission.getStatus())
+                .remark(submission.getRemark())
+                .reviewedBy(submission.getReviewedBy())
+                .submittedDate(submission.getSubmittedDate())
+                .build();
     }
+
 }

@@ -2,7 +2,6 @@ package com.project.student.education.controller;
 
 
 import com.project.student.education.DTO.CreateTimetableRequest;
-import com.project.student.education.DTO.StudentTimetableResponse;
 import com.project.student.education.DTO.StudentWeeklyTimetableDTO;
 import com.project.student.education.service.StudentService;
 import org.springframework.http.ResponseEntity;

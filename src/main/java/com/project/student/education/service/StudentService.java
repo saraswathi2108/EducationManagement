@@ -380,7 +380,6 @@ public class StudentService {
 
         timetableRepository.deleteAll(existing);
 
-        // 3️⃣ Re-Insert Updated Timetable Periods
         for (CreateTimetableRequest.PeriodRequest p : request.getPeriods()) {
 
             Subject subject = subjectRepository.findById(p.getSubjectId())
