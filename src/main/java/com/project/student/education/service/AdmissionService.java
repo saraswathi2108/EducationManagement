@@ -31,8 +31,8 @@ import java.util.List;
 public class AdmissionService {
 
 
-    @Value("${project.image}")
-    private String imagePath;
+//    @Value("${project.image}")
+//    private String imagePath;
 
     private final AdmissionRepository admissionRepository;
     private final IdGenerator idGenerator;
@@ -52,15 +52,15 @@ public class AdmissionService {
         admission.setCreatedAt(LocalDate.now().atStartOfDay());
 
         if (photoUrl != null && !photoUrl.isEmpty()) {
-            String uploadPath = imagePath + admissionNumber;
             try {
-                String fileName = fileService.uploadImage(uploadPath, photoUrl);
-                admission.setPhotoUrl(uploadPath + "/" + fileName);
+                String imageUrl = fileService.uploadFile(photoUrl);
+
+                admission.setPhotoUrl(imageUrl);
+
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload photo");
             }
         }
-
         Admission savedAdmission = admissionRepository.save(admission);
 
         modelMapper.getConfiguration().setAmbiguityIgnored(true);

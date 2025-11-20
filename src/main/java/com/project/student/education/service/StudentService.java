@@ -6,7 +6,9 @@ import com.project.student.education.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,6 +31,8 @@ public class StudentService {
     @Autowired
     private IdGenerator idGenerator;
 
+    private final FileService fileService;
+
     @Autowired
     private TeacherRepository teacherRepository;
 
@@ -37,6 +41,10 @@ public class StudentService {
     private TimetableRepository timetableRepository;
     @Autowired
     private ClassSubjectMappingRepository classSubjectMappingRepository;
+
+    public StudentService(FileService fileService) {
+        this.fileService = fileService;
+    }
 
     public List<StudentDTO> getAllStudents() {
         return studentRepository.findAll()
@@ -52,11 +60,12 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDTO updateStudent(String studentId, StudentDTO dto) {
+    public StudentDTO updateStudent(String studentId, StudentDTO dto, MultipartFile photo) throws IOException {
 
         Student existing = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
 
+        // Update text fields
         existing.setFullName(dto.getFullName());
         existing.setDateOfBirth(dto.getDateOfBirth());
         existing.setGender(dto.getGender());
@@ -83,7 +92,6 @@ public class StudentService {
         existing.setGuardianContact(dto.getGuardianContact());
         existing.setEmergencyContactName(dto.getEmergencyContactName());
         existing.setEmergencyContactNumber(dto.getEmergencyContactNumber());
-        existing.setProfileImageUrl(dto.getProfileImageUrl());
 
         if (dto.getClassSectionId() != null) {
             ClassSection section = classSectionRepository.findById(dto.getClassSectionId())
@@ -93,15 +101,24 @@ public class StudentService {
             existing.setSection(section.getSection());
         }
 
+        if (photo != null && !photo.isEmpty()) {
+            String newImageUrl = fileService.updateFile(photo, existing.getProfileImageUrl());
+            existing.setProfileImageUrl(newImageUrl);
+        }
+
         Student updated = studentRepository.save(existing);
         return convertToDTO(updated);
     }
+
 
     @Transactional
     public StudentDTO deleteStudent(String studentId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
 
+        if (student.getProfileImageUrl() != null) {
+            fileService.deleteFile(student.getProfileImageUrl());
+        }
         if (student.getAdmission() != null) {
             Admission admission = student.getAdmission();
             admission.setStudent(null);

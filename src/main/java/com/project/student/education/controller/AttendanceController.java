@@ -1,6 +1,7 @@
 package com.project.student.education.controller;
 
 import com.project.student.education.DTO.AttendanceRequest;
+import com.project.student.education.DTO.AttendanceViewDTO;
 import com.project.student.education.service.AttendanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,16 @@ public class AttendanceController {
                 "message", "Attendance marked successfully",
                 "data", result
         ));
+    }
+    @GetMapping("/{studentId}/{year}/{month}")
+    public ResponseEntity<AttendanceViewDTO> getAttendanceByStudent(
+            @PathVariable String studentId,
+            @PathVariable int year,
+            @PathVariable int month) {
+
+        return ResponseEntity.ok(
+                attendanceService.getAttendanceByStudent(studentId, year, month)
+        );
     }
 
 }

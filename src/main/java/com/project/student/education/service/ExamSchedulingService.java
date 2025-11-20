@@ -55,26 +55,20 @@ public class ExamSchedulingService {
     @Transactional
     public List<ExamRecordDTO> scheduleBulk(BulkScheduleRequest req) {
 
-        // 1️⃣ Validate Exam
         if (!examRepo.existsById(req.getExamId()))
             throw new EntityNotFoundException("Exam not found: " + req.getExamId());
 
-        // 2️⃣ Validate Class
         if (!classRepo.existsById(req.getClassSectionId()))
             throw new EntityNotFoundException("Class not found: " + req.getClassSectionId());
 
-        // 3️⃣ Validate Subject
         if (!subjectRepo.existsById(req.getSubjectId()))
             throw new EntityNotFoundException("Subject not found: " + req.getSubjectId());
 
-
-        // 4️⃣ Load Students (Request → or from DB)
         List<String> studentIds = req.getStudentIds();
         if (studentIds == null || studentIds.isEmpty()) {
             studentIds = studentRepo.findStudentIdsByClassSectionId(req.getClassSectionId());
         }
 
-        // 5️⃣ If no students in class → ERROR
         if (studentIds == null || studentIds.isEmpty()) {
             throw new EntityNotFoundException(
                     "No students found for class section: " + req.getClassSectionId()
@@ -85,8 +79,6 @@ public class ExamSchedulingService {
         List<ExamRecordDTO> output = new ArrayList<>();
         boolean atLeastOneInserted = false;
 
-
-        // 6️⃣ Create exam record for each student
         for (String studentId : studentIds) {
 
             boolean alreadyExists = recordRepo.existsByExamIdAndClassSectionIdAndSubjectIdAndStudentId(
@@ -94,7 +86,6 @@ public class ExamSchedulingService {
             );
 
             if (alreadyExists) {
-                // Skip this student
                 continue;
             }
 

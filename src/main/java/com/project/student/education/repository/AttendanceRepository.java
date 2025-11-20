@@ -5,8 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Repository
 public interface AttendanceRepository  extends JpaRepository<StudentAttendance, Integer> {
     boolean existsByClassSectionIdAndDate(String classSectionId, LocalDate date);
+
+    List<StudentAttendance> findByStudentIdAndDateBetween(String studentId, LocalDate start, LocalDate end);
 }

@@ -5,15 +5,22 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.List;
 
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class AttendanceRequest {
 
     private String classSectionId;
     private LocalDate date;
+    private List<Entry> entries;
 
-    private List<AttendanceEntryDTO> entries;
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Entry {
+        private String studentId;
+        private String status;
+    }
 }
+

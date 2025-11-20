@@ -5,7 +5,9 @@ import com.project.student.education.service.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -27,11 +29,17 @@ public class StudentController {
         return ResponseEntity.ok(studentService.getStudentById(studentId));
     }
 
-    @PutMapping("/{studentId}")
-    public ResponseEntity<StudentDTO> updateStudent(@PathVariable String studentId, @RequestBody StudentDTO studentDTO) {
-        StudentDTO studentDTO1=studentService.updateStudent(studentId,studentDTO);
-        return ResponseEntity.ok(studentDTO1);
+    @PutMapping(value = "/{studentId}", consumes = "multipart/form-data")
+    public ResponseEntity<StudentDTO> updateStudent(
+            @PathVariable String studentId,
+            @RequestPart("data") StudentDTO dto,
+            @RequestPart(value = "photo", required = false) MultipartFile photo
+    ) throws IOException {
+        StudentDTO updated = studentService.updateStudent(studentId, dto, photo);
+        return ResponseEntity.ok(updated);
     }
+
+
 
     @DeleteMapping("/{studentId}")
     public ResponseEntity<StudentDTO>deleteStudent(@PathVariable String studentId) {
