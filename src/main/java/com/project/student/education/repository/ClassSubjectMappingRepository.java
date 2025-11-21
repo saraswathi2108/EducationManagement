@@ -21,4 +21,6 @@ public interface ClassSubjectMappingRepository extends JpaRepository<ClassSubjec
 
 
     void deleteByClassSection(ClassSection classSection);
+
+    List<ClassSubjectMapping> findByTeacher_TeacherId(String teacherId);
 }

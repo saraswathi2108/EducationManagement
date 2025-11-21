@@ -13,5 +13,5 @@ public interface ClassSectionRepository extends JpaRepository<ClassSection, Stri
 
     Optional<ClassSection> findByClassNameAndAcademicYear(String className, String academicYear);
 
-    void deleteByClassSectionId(String classSectionId);
+
 }

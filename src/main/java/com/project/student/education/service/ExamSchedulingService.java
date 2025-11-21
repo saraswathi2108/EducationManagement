@@ -1,7 +1,7 @@
 package com.project.student.education.service;
 
 import com.project.student.education.DTO.*;
-import com.project.student.education.entity.ExamRecord;
+import com.project.student.education.entity.*;
 import com.project.student.education.enums.RecordStatus;
 import com.project.student.education.repository.*;
 
@@ -288,6 +288,65 @@ public class ExamSchedulingService {
         }
 
         return output;
+    }
+
+
+
+
+    public List<TimetableDayDTO> getTeacherClassExamTimetable(String examId, String teacherId) {
+
+        ClassSection classSection = classRepo.findByClassTeacher_TeacherId(teacherId)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No class assigned to this teacher"));
+
+        return getTimetable(examId, classSection.getClassSectionId());
+    }
+
+    public List<TimetableDayDTO> getTeacherSubjectExamTimetable(String examId, String teacherId) {
+        List<ClassSubjectMapping> mappings =
+                classSubjectRepo.findByTeacher_TeacherId(teacherId);
+
+        if (mappings.isEmpty()) {
+            throw new RuntimeException("No subjects assigned to this teacher");
+        }
+        Map<LocalDate, TimetableDayDTO> map = new LinkedHashMap<>();
+
+        for (ClassSubjectMapping m : mappings) {
+
+            String classSectionId = m.getClassSection().getClassSectionId();
+            String subjectId = m.getSubject().getSubjectId();
+
+            // 3️⃣ Fetch exam records for this subject in this class
+            List<ExamRecord> subjectRecords =
+                    recordRepo.findByExamIdAndClassSectionIdAndSubjectId(
+                            examId, classSectionId, subjectId
+                    );
+            for (ExamRecord r : subjectRecords) {
+
+                LocalDate examDate = r.getExamDate();
+                if (examDate == null) continue;
+
+                map.computeIfAbsent(examDate, d -> {
+                    TimetableDayDTO dto = new TimetableDayDTO();
+                    dto.setExamDate(d);
+                    dto.setDayName(d.getDayOfWeek().name());
+                    dto.setSubjects(new ArrayList<>());
+                    return dto;
+                });
+
+                TimetableSubjectDTO subDto = new TimetableSubjectDTO();
+                subDto.setSubjectId(r.getSubjectId());
+                subDto.setSubjectName(r.getSubject().getSubjectName());
+                subDto.setStartTime(r.getStartTime().toString());
+                subDto.setEndTime(r.getEndTime().toString());
+                subDto.setRoomNumber(r.getRoomNumber());
+
+                map.get(examDate).getSubjects().add(subDto);
+            }
+        }
+
+        return new ArrayList<>(map.values());
     }
 
 }

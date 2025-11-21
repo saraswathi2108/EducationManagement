@@ -7,6 +7,8 @@ import com.project.student.education.service.ExamService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -78,6 +80,33 @@ public class ExamController {
         List<ExamRecordDTO>examRecordDTOS=schedulingService.scheduleComprehensive(req);
         return ResponseEntity.ok(examRecordDTOS);
     }
+
+
+    @GetMapping("/teacher/{examId}")
+    public ResponseEntity<List<TimetableDayDTO>> getTeacherClassExamTimetable(
+            @PathVariable String examId
+    ) {
+        String teacherId = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return ResponseEntity.ok(
+                schedulingService.getTeacherClassExamTimetable(examId, teacherId)
+        );
+    }
+    @GetMapping("/teacher/subject/{examId}")
+    public ResponseEntity<List<TimetableDayDTO>> getTeacherSubjectExamTimetable(
+            @PathVariable String examId
+    ) {
+        String teacherId = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return ResponseEntity.ok(
+                schedulingService.getTeacherSubjectExamTimetable(examId, teacherId)
+        );
+    }
+
+
+
+
+
 
 
 }

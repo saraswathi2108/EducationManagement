@@ -16,4 +16,5 @@ public interface SubjectRepository extends JpaRepository<Subject,String> {
     Optional<Subject> findBySubjectNameIgnoreCase(String name);
 
     Optional<Subject> findBySubjectCodeIgnoreCase(String code);
+
 }

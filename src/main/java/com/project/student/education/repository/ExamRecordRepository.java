@@ -25,4 +25,6 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecord, Long> {
     Optional<ExamRecord> findByExamIdAndStudentIdAndSubjectId(String examId, String studentId, String subjectId);
 
     List<ExamRecord> findByExamIdAndClassSectionId(String examId, String classSectionId);
+
+    List<ExamRecord> findByExamIdAndClassSectionIdAndSubjectId(String examId, String classSectionId, String subjectId);
 }
