@@ -18,6 +18,9 @@ target/
 *.iws
 *.iml
 *.ipr
+# Ignore Windows shortcuts
+*.lnk
+
 
 ### NetBeans ###
 /nbproject/private/

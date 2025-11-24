@@ -20,15 +20,6 @@ public class TransportController {
 
 
 
-
-//    @Autowired
-//    private TransportService transportService;
-//    @PostMapping("/assign/{studentId}")
-//    public ResponseEntity<StudentTransportDTO> assign(@PathVariable String studentId, @RequestBody TransportAssignRequest assignRequest) {
-//        return ResponseEntity.ok(transportService.assignTransport(studentId,assignRequest));
-//
-//    }
-
     @PostMapping("/route")
     public ResponseEntity<TransportRoute> create(@RequestBody TransportRoute route) {
         return ResponseEntity.ok(transportService.createRoute(route));
@@ -40,6 +31,20 @@ public class TransportController {
             @RequestBody TransportRoute route) {
         return ResponseEntity.ok(transportService.updateRoute(id, route));
     }
+
+    @PostMapping("/assign/{studentId}")
+    public ResponseEntity<StudentTransportDTO> assign(
+            @PathVariable String studentId,
+            @RequestBody TransportAssignRequest assignRequest) {
+
+        return ResponseEntity.ok(transportService.assignTransport(studentId, assignRequest));
+    }
+
+    @GetMapping("/{studentId}")
+    public ResponseEntity<StudentTransportDTO> getDetails(@PathVariable String studentId) {
+        return ResponseEntity.ok(transportService.getStudentTransportDetails(studentId));
+    }
+
 
 
 

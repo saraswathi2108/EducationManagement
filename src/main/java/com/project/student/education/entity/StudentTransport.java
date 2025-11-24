@@ -16,7 +16,7 @@ public class StudentTransport {
     private String studentId;
 
     @ManyToOne
-    @JoinColumn(name = "route_id")
+    @JoinColumn(name = "route_id", referencedColumnName = "routeId")
     private TransportRoute route;
 
     private String pickupStop;
