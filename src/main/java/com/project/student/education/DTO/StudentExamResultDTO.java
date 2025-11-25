@@ -1,30 +1,24 @@
 package com.project.student.education.DTO;
 
 import lombok.*;
-
 import java.util.List;
 
-@Getter
-@Setter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class StudentExamResultDTO {
 
-    private String studentId;
-    private String studentName;
     private String examId;
     private String examName;
 
-    private int numSubjects;
+    private String studentId;
+    private String studentName;
+    private String className;
+    private String section;
 
-    private double totalMarksObtained;
-    private double maxTotalMarks;
+    private Double totalMarksObtained;
+    private Double totalMarksMax;
+    private Double percentage;
 
-    private double percentage;
-    private int rank;
+    private Integer rank;
 
-    private String resultMessage;
-
-    private List<SubjectMarksDTO> subjects;
+    private List<SubjectResultDTO> subjects;
 }

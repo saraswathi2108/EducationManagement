@@ -1,5 +1,7 @@
 package com.project.student.education.entity;
 
+import com.project.student.education.enums.ExamAttendanceStatus;
+import com.project.student.education.enums.ExamResultStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -21,7 +23,6 @@ public class ExamRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long recordId;
 
-
     @Column(name = "exam_id", nullable = false)
     private String examId;
 
@@ -38,8 +39,7 @@ public class ExamRecord {
     private String invigilatorId;
 
 
-
-
+    // RELATIONS
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_section_id", insertable = false, updatable = false)
     private ClassSection classSection;
@@ -52,35 +52,36 @@ public class ExamRecord {
     @JoinColumn(name = "student_id", insertable = false, updatable = false)
     private Student student;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invigilator_id", insertable = false, updatable = false)
-    private Teacher invigilator;
 
-
-
+    // EXAM INFO
     private LocalDate examDate;
-
     private LocalTime startTime;
     private LocalTime endTime;
 
     private String roomNumber;
 
-    private Double maxMarks;
+
+    // PAPER MARKS
+    private Double paperTotal;        // Example 80
+    private Double paperObtained;     // Example 70
+
+    // ASSIGNMENT MARKS
+    private Double assignmentTotal;   // Example 20
+    private Double assignmentObtained; // Example 18
+
+    // CONDITIONS
     private Double passMarks;
 
-    private Double marksObtained;
-    private String grade;
+    @Enumerated(EnumType.STRING)
+    private ExamAttendanceStatus attendanceStatus;
 
-    private String attendanceStatus;
+    // STATUS (ENTERED / PUBLISHED)
+    @Enumerated(EnumType.STRING)
+    private ExamResultStatus resultStatus;
 
-    private String status;
+
     private String remarks;
-
-    private Boolean revaluationRequested;
-    private String revaluationStatus;
-
     private String enteredBy;
-    private String verifiedBy;
     private String publishedBy;
 
     private LocalDateTime createdAt;

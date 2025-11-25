@@ -66,10 +66,10 @@ public class ExamController {
         List<TimetableDayDTO>examRecordDTOS=schedulingService.getTimetable(examId,classSectionId);
         return ResponseEntity.ok(examRecordDTOS);
     }
-    @PutMapping("/enter-marks/{subjectId}")
-    public ResponseEntity<SubjectMarksEntryRequest> enterMarks(@RequestBody SubjectMarksEntryRequest dto,@PathVariable String subjectId) {
-        return ResponseEntity.ok(schedulingService.enterMarks(dto,subjectId));
-    }
+  //  @PutMapping("/enter-marks/{subjectId}")
+//    public ResponseEntity<SubjectMarksEntryRequest> enterMarks(@RequestBody SubjectMarksEntryRequest dto,@PathVariable String subjectId) {
+//        return ResponseEntity.ok(schedulingService.enterMarks(dto,subjectId));
+//    }
 
 //    @GetMapping("result/{studentId}")
 //    public ResponseEntity<Stu>
@@ -107,7 +107,36 @@ public class ExamController {
 //        return ResponseEntity.ok(
 //                schedulingService.getStudentExamResult(examId, studentId)
 //        );
-//    }
+
+    @PutMapping("/enter-marks/{subjectId}")
+    public ResponseEntity<String> enterMarks(
+            @PathVariable String subjectId,
+            @RequestBody List<MarksEntryRequest> entries) {
+
+        examService.enterMarks(subjectId, entries);
+        return ResponseEntity.ok("Marks saved successfully for subject " + subjectId);
+    }
+    @PutMapping("/publish/{examId}/{classSectionId}")
+    public ResponseEntity<String> publishResult(
+            @PathVariable String examId,
+            @PathVariable String classSectionId,
+            @RequestParam(defaultValue = "ADMIN") String adminName) {
+
+        examService.publishResult(examId, classSectionId, adminName);
+        return ResponseEntity.ok("Result published successfully.");
+    }
+    @GetMapping("/result/{examId}/{studentId}")
+    public ResponseEntity<StudentExamResultDTO> getResult(
+            @PathVariable String examId,
+            @PathVariable String studentId,
+            @RequestParam String classSectionId) {
+
+        return ResponseEntity.ok(
+                examService.getStudentResult(examId, studentId, classSectionId)
+        );
+    }
+
+
 
 
 
