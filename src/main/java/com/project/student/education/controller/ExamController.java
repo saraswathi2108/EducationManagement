@@ -99,14 +99,7 @@ public class ExamController {
                 schedulingService.getTeacherSubjectExamTimetable(examId)
         );
     }
-//    @GetMapping("/results/{examId}/student/{studentId}")
-//    public ResponseEntity<StudentExamResultDTO> getStudentExamResult(
-//            @PathVariable String examId,
-//            @PathVariable String studentId) {
-//
-//        return ResponseEntity.ok(
-//                schedulingService.getStudentExamResult(examId, studentId)
-//        );
+
 
     @PutMapping("/enter-marks/{subjectId}")
     public ResponseEntity<String> enterMarks(
@@ -116,6 +109,17 @@ public class ExamController {
         examService.enterMarks(subjectId, request);
         return ResponseEntity.ok("Marks saved successfully for subject " + subjectId);
     }
+    @GetMapping("/records/{examId}/{classSectionId}/{subjectId}")
+    public ResponseEntity<List<StudentExamRecordDTO>> getExamRecords(
+            @PathVariable String examId,
+            @PathVariable String classSectionId,
+            @PathVariable String subjectId) {
+
+        return ResponseEntity.ok(
+                examService.getExamRecords(examId, classSectionId, subjectId)
+        );
+    }
+
 
 
 

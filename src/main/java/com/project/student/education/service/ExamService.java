@@ -227,4 +227,22 @@ public class ExamService {
                 .subjects(subjects)
                 .build();
     }
+
+    public List<StudentExamRecordDTO> getExamRecords(String examId, String classSectionId, String subjectId) {
+
+        List<ExamRecord> records =
+                examRecordRepo.findByExamIdAndClassSectionIdAndSubjectId(
+                        examId, classSectionId, subjectId
+                );
+
+        return records.stream().map(r ->
+                StudentExamRecordDTO.builder()
+                        .recordId(r.getRecordId())
+                        .studentId(r.getStudentId())
+                        .fullName(r.getStudent().getFullName())
+                        .rollNumber(r.getStudent().getRollNumber())
+                        .build()
+        ).toList();
+    }
+
 }
