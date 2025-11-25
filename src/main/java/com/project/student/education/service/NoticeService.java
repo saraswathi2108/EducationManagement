@@ -22,7 +22,7 @@ public class NoticeService {
         if (noticeRepository.existsByNoticeName(notice.getNoticeName())) {
             throw new RuntimeException("Notice already exists with name: " + notice.getNoticeName());
         }
-        notice.setId(idGenerator.generateId("TCH"));
+        notice.setId(idGenerator.generateId("NOT"));
         return noticeRepository.save(notice);
     }
 
