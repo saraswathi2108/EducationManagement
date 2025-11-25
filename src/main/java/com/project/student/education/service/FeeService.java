@@ -1,70 +1,138 @@
 package com.project.student.education.service;
 
-
-import com.project.student.education.entity.FeeHead;
-import com.project.student.education.entity.FeeStructure;
+import com.project.student.education.DTO.CreateFeeRequest;
+import com.project.student.education.DTO.CreatePaymentRequest;
+import com.project.student.education.DTO.FeeSummaryDTO;
+import com.project.student.education.DTO.StudentFeeDTO;
+import com.project.student.education.entity.Admission;
 import com.project.student.education.entity.IdGenerator;
-import com.project.student.education.repository.FeeHeadRepository;
-import com.project.student.education.repository.FeeStructureRepository;
+import com.project.student.education.entity.Payment;
+import com.project.student.education.entity.StudentFee;
+import com.project.student.education.enums.FeeStatus;
+import com.project.student.education.repository.AdmissionRepository;
+import com.project.student.education.repository.PaymentRepository;
+import com.project.student.education.repository.StudentFeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class FeeService {
 
-    private final FeeHeadRepository feeHeadRepository;
     private final IdGenerator idGenerator;
-    private final FeeStructureRepository feeStructureRepository;
+    private final StudentFeeRepository feeRepo;
+    private final PaymentRepository paymentRepo;
+    private final AdmissionRepository admissionRepo;
 
-
-    public FeeHead create(FeeHead feeHead) {
-        if (feeHeadRepository.existsByName(feeHead.getName())) {
-            throw new RuntimeException("Fee head with same name already exists");
-        }
-        feeHead.setId(idGenerator.generateId("FEE"));
-        return feeHeadRepository.save(feeHead);
+    public StudentFee createFee(CreateFeeRequest req) {
+        StudentFee fee = StudentFee.builder()
+                .feeId(idGenerator.generateId("FEE"))
+                .studentId(req.getStudentId())
+                .feeName(req.getFeeName())
+                .amount(req.getAmount())
+                .amountPaid(0.0)
+                .dueDate(req.getDueDate())
+                .status(FeeStatus.PENDING)
+                .createdAt(LocalDateTime.now())
+                .build();
+        return feeRepo.save(fee);
     }
 
-    public FeeHead getById(String id) {
-        return feeHeadRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Fee head not found"));
-    }
-    public List<FeeHead> getAll() {
-        return feeHeadRepository.findAll();
-    }
+    public List<StudentFee> bulkCreate(List<CreateFeeRequest> list) {
+        List<StudentFee> fees = list.stream()
+                .map(r -> StudentFee.builder()
+                        .feeId(idGenerator.generateId("FEE"))
+                        .studentId(r.getStudentId())
+                        .feeName(r.getFeeName())
+                        .amount(r.getAmount())
+                        .amountPaid(0.0)
+                        .dueDate(r.getDueDate())
+                        .status(FeeStatus.PENDING)
+                        .createdAt(LocalDateTime.now())
+                        .build()
+                )
+                .collect(Collectors.toList());
 
-    public FeeStructure createFeeStructure(FeeStructure fs) {
-
-        boolean exists = feeStructureRepository
-                .findByFeeHeadIdAndClassSectionIdAndRouteIdAndTermCodeAndAcademicYear(
-                        fs.getFeeHeadId(),
-                        fs.getClassSectionId(),
-                        fs.getRouteId(),
-                        fs.getTermCode(),
-                        fs.getAcademicYear()
-                ).isPresent();
-
-        if (exists) {
-            throw new RuntimeException("Fee structure already exists for this configuration");
-        }
-
-        fs.setId(idGenerator.generateId("FEE"));
-        return feeStructureRepository.save(fs);
+        return feeRepo.saveAll(fees);
     }
 
-    public List<FeeStructure> getAllfee() {
-        return feeStructureRepository.findAll();
+    public List<StudentFeeDTO> getAllFees(String studentId) {
+        return feeRepo.findByStudentId(studentId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
     }
 
-    public List<FeeStructure> getByClassAndYear(String classId, String academicYear) {
-        return feeStructureRepository.findByClassSectionIdAndAcademicYear(classId, academicYear);
-
+    private StudentFeeDTO toDto(StudentFee fee) {
+        StudentFeeDTO dto = new StudentFeeDTO();
+        dto.setFeeId(fee.getFeeId());
+        dto.setFeeName(fee.getFeeName());
+        dto.setAmount(fee.getAmount());
+        dto.setAmountPaid(fee.getAmountPaid());
+        dto.setDueDate(fee.getDueDate());
+        dto.setStatus(fee.getStatus().name());
+        return dto;
     }
 
-    public List<FeeStructure> getByRouteAndYear(String routeId, String academicYear) {
-        return feeStructureRepository.findByRouteIdAndAcademicYear(routeId, academicYear);
+    public List<Payment> getAllPayments() {
+        return paymentRepo.findAll();
+    }
+
+    public FeeSummaryDTO getSummary(String studentId) {
+        Admission admission = admissionRepo.findByStudent_StudentId(studentId)
+                .orElseThrow(() -> new RuntimeException("Admission not found"));
+
+        double totalFee = admission.getTotalFee() == null ? 0.0 : admission.getTotalFee();
+
+        double paid = feeRepo.findByStudentId(studentId).stream()
+                .mapToDouble(f -> f.getAmountPaid() == null ? 0.0 : f.getAmountPaid())
+                .sum();
+
+        return new FeeSummaryDTO(totalFee, paid, totalFee - paid);
+    }
+
+    public List<StudentFeeDTO> getPendingFees(String studentId) {
+        List<FeeStatus> statuses = List.of(FeeStatus.PENDING, FeeStatus.PARTIAL, FeeStatus.OVERDUE);
+
+        return feeRepo.findByStudentIdAndStatusIn(studentId, statuses)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+    @Transactional
+    public Payment pay(CreatePaymentRequest req) {
+        StudentFee fee = feeRepo.findById(req.getFeeId())
+                .orElseThrow(() -> new RuntimeException("Fee not found"));
+
+        Payment payment = Payment.builder()
+                .paymentId(idGenerator.generateId("PAY"))
+                .feeId(fee.getFeeId())
+                .studentId(fee.getStudentId())
+                .amount(req.getAmount())
+                .paymentDate(LocalDateTime.now())
+                .method(req.getMethod())
+                .transactionRef("TXN-" + UUID.randomUUID())
+                .build();
+
+        paymentRepo.save(payment);
+
+        double newPaid = fee.getAmountPaid() + req.getAmount();
+        fee.setAmountPaid(newPaid);
+
+        if (newPaid >= fee.getAmount()) fee.setStatus(FeeStatus.PAID);
+        else fee.setStatus(FeeStatus.PARTIAL);
+
+        feeRepo.save(fee);
+
+        return payment;
+    }
+    public List<Payment> getPaymentHistory(String studentId) {
+        return paymentRepo.findByStudentId(studentId);
     }
 }

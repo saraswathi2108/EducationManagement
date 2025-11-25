@@ -23,11 +23,12 @@ public class AdmissionDTO {
     private String religion;
     private String category;
     private String aadhaarNumber;
+    private Double totalFee;
+
 
 
     private String gradeApplied;
     private String academicYear;
-   // private String section;
 
     private String previousSchool;
     private String previousClass;

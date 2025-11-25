@@ -11,9 +11,9 @@ import java.util.Optional;
 
 @Repository
 public interface AdmissionRepository extends JpaRepository<Admission,String> {
-    Optional<Admission> findByAdmissionNumber(String admissionNumber);
 
     List<Admission> findByStatus(AdmissionStatus status);
 
-    boolean existsByAadhaarCardNumber(String aadhaarCardNumber);
+
+    Optional<Admission> findByStudent_StudentId(String studentId);
 }

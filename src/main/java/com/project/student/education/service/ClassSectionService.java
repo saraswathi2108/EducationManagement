@@ -216,4 +216,10 @@ public class ClassSectionService {
         return mapToDTO(classSection);
     }
 
+    public List<StudentDTO> getUnassignedStudentsByGrade(String grade) {
+        return studentRepository.findByGradeAndClassSectionIsNull(grade)
+                .stream()
+                .map(student -> modelMapper.map(student, StudentDTO.class))
+                .toList();
+    }
 }

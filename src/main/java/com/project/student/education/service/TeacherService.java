@@ -11,7 +11,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +29,8 @@ public class TeacherService {
     private final ClassSectionRepository classSectionRepository;
     private final TimetableRepository timetableRepository;
     private final SubjectRepository subjectRepository;
+
+    // ✅ Added Repository for fetching subject mappings
     private final ClassSubjectMappingRepository classSubjectMappingRepository;
 
     public TeacherDTO addTeacher(TeacherDTO dto) {
@@ -60,21 +61,18 @@ public class TeacherService {
                 .user(user)
                 .build();
 
-        // ✅ Save subjects teacher can teach (NO CLASS)
         if (dto.getSubjectIds() != null && !dto.getSubjectIds().isEmpty()) {
             teacher.setSubjectIds(dto.getSubjectIds());
         }
 
         teacherRepository.save(teacher);
 
-        // ✅ Build response
         TeacherDTO response = modelMapper.map(teacher, TeacherDTO.class);
         response.setPassword(rawPassword);
         response.setSubjectIds(teacher.getSubjectIds());
 
         return response;
     }
-
 
     public List<TeacherDTO> getAllTeachers() {
         return teacherRepository.findAll()
@@ -90,7 +88,6 @@ public class TeacherService {
     }
 
     public TeacherDTO updateTeacher(String teacherId, TeacherDTO dto) {
-
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
@@ -102,21 +99,17 @@ public class TeacherService {
         teacher.setExperience(dto.getExperience());
         teacher.setAddress(dto.getAddress());
 
-        // ✅ Update subjects teacher can teach (NOT class assignment)
         if (dto.getSubjectIds() != null) {
             teacher.setSubjectIds(dto.getSubjectIds());
         }
 
         teacherRepository.save(teacher);
 
-        // ✅ Return response including subjectIds
         TeacherDTO response = modelMapper.map(teacher, TeacherDTO.class);
         response.setSubjectIds(teacher.getSubjectIds());
 
         return response;
     }
-
-
 
     public String deleteTeacher(String teacherId) {
         Teacher teacher = teacherRepository.findById(teacherId)
@@ -143,7 +136,6 @@ public class TeacherService {
     }
 
     public String updateClassTeacher(String classSectionId, String teacherId) {
-
         ClassSection section = classSectionRepository.findById(classSectionId)
                 .orElseThrow(() -> new RuntimeException("Class section not found"));
 
@@ -157,30 +149,47 @@ public class TeacherService {
                 " to teacher " + teacherId;
     }
 
+    // 🔥 UPDATED LOGIC: Get Classes for BOTH Class Teacher & Subject Teacher
     public List<ClassSectionMiniDTO> getClassesHandledByTeacher(String teacherId) {
 
-        Teacher teacher = teacherRepository.findById(teacherId)
-                .orElseThrow(() -> new RuntimeException("Teacher not found: " + teacherId));
+        if (!teacherRepository.existsById(teacherId)) {
+            throw new RuntimeException("Teacher not found: " + teacherId);
+        }
 
-        List<ClassSection> sections = classSectionRepository
+        // 1. Classes where they are the MAIN CLASS TEACHER
+        List<ClassSection> asClassTeacher = classSectionRepository
                 .findByClassTeacher_TeacherId(teacherId);
 
-        return sections.stream().map(sec -> ClassSectionMiniDTO.builder()
-                .classSectionId(sec.getClassSectionId())
-                .className(sec.getClassName())
-                .sectionName(sec.getSection())
-                .academicYear(sec.getAcademicYear())
-                .build()
-        ).toList();
+        // 2. Classes where they are assigned as a SUBJECT TEACHER
+        // (Requires ClassSubjectMappingRepository)
+        List<ClassSubjectMapping> subjectMappings = classSubjectMappingRepository
+                .findByTeacher_TeacherId(teacherId);
+
+        List<ClassSection> asSubjectTeacher = subjectMappings.stream()
+                .map(ClassSubjectMapping::getClassSection)
+                .toList();
+
+        // 3. Merge both lists and remove duplicates using a Set
+        Set<ClassSection> uniqueClasses = new HashSet<>(asClassTeacher);
+        uniqueClasses.addAll(asSubjectTeacher);
+
+        // 4. Convert to DTO
+        return uniqueClasses.stream()
+                .sorted(Comparator.comparing(ClassSection::getClassName)) // Optional: Sort
+                .map(sec -> ClassSectionMiniDTO.builder()
+                        .classSectionId(sec.getClassSectionId())
+                        .className(sec.getClassName())
+                        .sectionName(sec.getSection())
+                        .academicYear(sec.getAcademicYear())
+                        .build()
+                ).toList();
     }
 
     public Long getTeacherCount() {
         return teacherRepository.countTeachers();
     }
 
-
     public TeacherWeeklyTimetableDTO getTeacherWeeklyTimetable(String teacherId, LocalDate weekReference) {
-
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
@@ -198,9 +207,7 @@ public class TeacherService {
                 "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY",
                 "FRIDAY", "SATURDAY"
         )) {
-
             LocalDate date = weekDates.get(dayName);
-
             List<Timetable> periods = grouped.getOrDefault(dayName, Collections.emptyList());
 
             List<TeacherWeeklyTimetableDTO.Period> periodDTOs = periods.stream()
@@ -235,7 +242,6 @@ public class TeacherService {
 
     private Map<String, LocalDate> getWeekDates(LocalDate referenceDate) {
         LocalDate monday = referenceDate.with(java.time.DayOfWeek.MONDAY);
-
         Map<String, LocalDate> map = new LinkedHashMap<>();
         map.put("MONDAY", monday);
         map.put("TUESDAY", monday.plusDays(1));
@@ -252,14 +258,11 @@ public class TeacherService {
                 .format(DateTimeFormatter.ofPattern("hh:mm a"));
     }
 
-
     public TeacherWeeklyTimetableDTO getClassTeacherTimetable(String teacherId, LocalDate weekStart) {
-
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
-        List<ClassSection> sections =
-                classSectionRepository.findByClassTeacher_TeacherId(teacherId);
+        List<ClassSection> sections = classSectionRepository.findByClassTeacher_TeacherId(teacherId);
 
         if (sections == null || sections.isEmpty()) {
             throw new RuntimeException("This teacher is not a class teacher");
@@ -268,18 +271,13 @@ public class TeacherService {
         ClassSection section = sections.get(0);
 
         List<Timetable> timetable = timetableRepository
-                .findByClassSection_ClassSectionIdOrderByDayAscStartTimeAsc(
-                        section.getClassSectionId()
-                );
+                .findByClassSection_ClassSectionIdOrderByDayAscStartTimeAsc(section.getClassSectionId());
 
         Map<String, LocalDate> weekDates = getWeekDates(weekStart);
-
         List<TeacherWeeklyTimetableDTO.DayEntry> weekly = new ArrayList<>();
 
         for (String day : List.of("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY")) {
-
             LocalDate date = weekDates.get(day);
-
             List<Timetable> periods = timetable.stream()
                     .filter(t -> t.getDay().equals(day))
                     .toList();

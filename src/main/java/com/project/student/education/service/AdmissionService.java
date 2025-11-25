@@ -116,6 +116,7 @@ public class AdmissionService {
                 .emergencyContactName(admission.getEmergencyContactName())
                 .emergencyContactNumber(admission.getEmergencyContactNumber())
                 .profileImageUrl(admission.getPhotoUrl())
+                .totalFee(admission.getTotalFee())
                 .active(true)
                 .build();
 
@@ -177,6 +178,7 @@ public class AdmissionService {
                 .emergencyContactName(student.getEmergencyContactName())
                 .emergencyContactNumber(student.getEmergencyContactNumber())
                 .profileImageUrl(student.getProfileImageUrl())
+                .totalFee(student.getTotalFee())
                 .active(student.getActive())
                 .build();
 

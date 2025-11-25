@@ -1,5 +1,6 @@
 package com.project.student.education.DTO;
 
+import com.project.student.education.enums.ExamAttendanceStatus;
 import lombok.*;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -17,6 +18,6 @@ public class SubjectResultDTO {
     private Double subjectTotalObtained;
     private Double subjectTotalMax;
 
-    private String attendanceStatus;
+    private ExamAttendanceStatus attendanceStatus;
     private String status;
 }

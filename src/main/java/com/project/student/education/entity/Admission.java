@@ -84,4 +84,6 @@ public class Admission {
     private Student student;
 
     private String rejectionReason;
+    private Double totalFee;
+
 }

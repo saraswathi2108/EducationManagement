@@ -132,6 +132,7 @@ public class ExamController {
         examService.publishResult(examId, classSectionId, adminName);
         return ResponseEntity.ok("Result published successfully.");
     }
+
     @GetMapping("/result/{examId}/{studentId}")
     public ResponseEntity<StudentExamResultDTO> getResult(
             @PathVariable String examId,
@@ -141,6 +142,13 @@ public class ExamController {
         return ResponseEntity.ok(
                 examService.getStudentResult(examId, studentId, classSectionId)
         );
+    }
+    @GetMapping("/class-result/{examId}/{classSectionId}")
+    public ResponseEntity<List<StudentExamResultDTO>> getClassExamResults(
+            @PathVariable String examId,
+            @PathVariable String classSectionId) {
+
+        return ResponseEntity.ok(examService.getClassExamResults(examId, classSectionId));
     }
 
 

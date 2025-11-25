@@ -92,6 +92,7 @@ public class StudentService {
         existing.setGuardianContact(dto.getGuardianContact());
         existing.setEmergencyContactName(dto.getEmergencyContactName());
         existing.setEmergencyContactNumber(dto.getEmergencyContactNumber());
+        existing.setTotalFee(dto.getTotalFee());
 
         if (dto.getClassSectionId() != null) {
             ClassSection section = classSectionRepository.findById(dto.getClassSectionId())
@@ -176,6 +177,7 @@ public class StudentService {
                 .emergencyContactName(s.getEmergencyContactName())
                 .emergencyContactNumber(s.getEmergencyContactNumber())
                 .profileImageUrl(s.getProfileImageUrl())
+                .totalFee(s.getTotalFee())
                 .active(s.getActive())
                 .build();
 

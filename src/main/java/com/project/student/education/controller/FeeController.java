@@ -1,8 +1,12 @@
 package com.project.student.education.controller;
 
 
-import com.project.student.education.entity.FeeHead;
-import com.project.student.education.entity.FeeStructure;
+import com.project.student.education.DTO.CreateFeeRequest;
+import com.project.student.education.DTO.CreatePaymentRequest;
+import com.project.student.education.DTO.FeeSummaryDTO;
+import com.project.student.education.DTO.StudentFeeDTO;
+import com.project.student.education.entity.Payment;
+import com.project.student.education.entity.StudentFee;
 import com.project.student.education.service.FeeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,42 +21,46 @@ public class FeeController {
     @Autowired
     private FeeService feeService;
 
-    @PostMapping("/feeType")
-    public ResponseEntity<FeeHead>createFeeType(@RequestBody FeeHead feeHead) {
-        return ResponseEntity.ok(feeService.create(feeHead));
+    @PostMapping("/admin/create")
+    public ResponseEntity<StudentFee> createFee(@RequestBody CreateFeeRequest req) {
+        return ResponseEntity.ok(feeService.createFee(req));
     }
 
-    @GetMapping("/feeType/{id}")
-    public ResponseEntity<FeeHead>getById(@PathVariable String id){
-        return ResponseEntity.ok(feeService.getById(id));
-
-
-    }
-    @GetMapping("/all")
-    public ResponseEntity<List<FeeHead>> getAll(){
-        return ResponseEntity.ok(feeService.getAll());
+    @PostMapping("/admin/bulk-create")
+    public ResponseEntity<List<StudentFee>> bulk(@RequestBody List<CreateFeeRequest> reqs) {
+        return ResponseEntity.ok(feeService.bulkCreate(reqs));
     }
 
-    @PostMapping("/feeStructure")
-    public ResponseEntity<FeeStructure> createFeeStructure(@RequestBody FeeStructure feeStructure) {
-        return ResponseEntity.ok(feeService.createFeeStructure(feeStructure));
+    @GetMapping("/admin/student/{studentId}")
+    public ResponseEntity<List<StudentFeeDTO>> allForStudent(@PathVariable String studentId) {
+        return ResponseEntity.ok(feeService.getAllFees(studentId));
     }
-    @GetMapping("/feeStructure")
-    public ResponseEntity<List<FeeStructure>> getAllFeeStructure() {
-        return ResponseEntity.ok(feeService.getAllfee());
-    }
-    @GetMapping("/feeStructure/class/{classId}")
-    public ResponseEntity<List<FeeStructure>> getByClass(
-            @PathVariable String classId,
-            @RequestParam String academicYear) {
 
-        return ResponseEntity.ok(feeService.getByClassAndYear(classId, academicYear));
+    @GetMapping("/admin/payments")
+    public ResponseEntity<List<Payment>> allPayments() {
+        return ResponseEntity.ok(feeService.getAllPayments());
     }
-    @GetMapping("/route/{routeId}")
-    public ResponseEntity<List<FeeStructure>> getByRoute(
-            @PathVariable String routeId,
-            @RequestParam String academicYear) {
 
-        return ResponseEntity.ok(feeService.getByRouteAndYear(routeId, academicYear));
+    @GetMapping("/student/summary/{studentId}")
+    public ResponseEntity<FeeSummaryDTO> summary(@PathVariable String studentId) {
+        return ResponseEntity.ok(feeService.getSummary(studentId));
     }
+
+    @GetMapping("/student/pending/{studentId}")
+    public ResponseEntity<List<StudentFeeDTO>> pending(@PathVariable String studentId) {
+        return ResponseEntity.ok(feeService.getPendingFees(studentId));
+    }
+    @GetMapping("/student/all/{studentId}")
+    public ResponseEntity<List<StudentFeeDTO>> all(@PathVariable String studentId) {
+        return ResponseEntity.ok(feeService.getAllFees(studentId));
+    }
+    @PostMapping("/student/pay")
+    public ResponseEntity<Payment> pay(@RequestBody CreatePaymentRequest req) {
+        return ResponseEntity.ok(feeService.pay(req));
+    }
+    @GetMapping("/student/payments/{studentId}")
+    public ResponseEntity<List<Payment>> history(@PathVariable String studentId) {
+        return ResponseEntity.ok(feeService.getPaymentHistory(studentId));
+    }
+
 }

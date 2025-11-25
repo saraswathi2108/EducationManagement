@@ -207,12 +207,6 @@ public class SubjectService {
 
     public String assignTeacherToSubject(AssignSubjectTeacherDTO dto) {
 
-        if (classSubjectMapping.existsByClassSection_ClassSectionIdAndSubject_SubjectId(
-                dto.getClassSectionId(), dto.getSubjectId()
-        )) {
-            throw new RuntimeException("Teacher already assigned for this subject in this class.");
-        }
-
         ClassSection section = classSectionRepository.findById(dto.getClassSectionId())
                 .orElseThrow(() -> new RuntimeException("Class section not found"));
 
@@ -222,17 +216,27 @@ public class SubjectService {
         Teacher teacher = teacherRepository.findById(dto.getTeacherId())
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
-        ClassSubjectMapping mapping = ClassSubjectMapping.builder()
-                .id(UUID.randomUUID().toString())
-                .classSection(section)
-                .subject(subject)
-                .teacher(teacher)
-                .build();
+        Optional<ClassSubjectMapping> existingMapping =
+                classSubjectMapping.findByClassSection_ClassSectionIdAndSubject_SubjectId(
+                        dto.getClassSectionId(), dto.getSubjectId()
+                );
 
-        classSubjectMapping.save(mapping);
+        if (existingMapping.isPresent()) {
+            ClassSubjectMapping mapping = existingMapping.get();
+            mapping.setTeacher(teacher);
+            classSubjectMapping.save(mapping);
+            return "Updated: " + subject.getSubjectName() + " is now assigned to " + teacher.getTeacherName();
+        } else {
+            ClassSubjectMapping mapping = ClassSubjectMapping.builder()
+                    .id(idGenerator.generateId("CSM"))
+                    .classSection(section)
+                    .subject(subject)
+                    .teacher(teacher)
+                    .build();
 
-        return subject.getSubjectName() + " assigned to " + teacher.getTeacherName() +
-                " for class " + section.getClassName() + section.getSection();
+            classSubjectMapping.save(mapping);
+            return "Assigned: " + subject.getSubjectName() + " to " + teacher.getTeacherName();
+        }
     }
 
     public Map<String, Object> getMappingForClass(String classSectionId) {

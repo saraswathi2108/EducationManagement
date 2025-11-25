@@ -58,6 +58,8 @@ public class StudentDTO {
 
 
     private String generatedPassword;
+    private Double totalFee;
+
 
 
 }

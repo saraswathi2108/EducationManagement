@@ -4,8 +4,8 @@ import com.project.student.education.entity.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
-import org.springframework.web.bind.annotation.RequestPart;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -27,4 +27,6 @@ public interface StudentRepository extends JpaRepository<Student, String> {
     GROUP BY s.gender
 """)
     List<Object[]> getGenderPercentage();
+
+    Collection<Object> findByGradeAndClassSectionIsNull(String grade);
 }

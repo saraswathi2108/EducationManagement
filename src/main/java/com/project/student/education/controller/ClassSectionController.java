@@ -76,4 +76,9 @@ public class ClassSectionController {
         return ResponseEntity.ok(classSectionDTO);
     }
 
+    @GetMapping("/students/unassigned/{grade}")
+    public ResponseEntity<List<StudentDTO>> getUnassignedStudents(@PathVariable String grade) {
+        return ResponseEntity.ok(classSectionService.getUnassignedStudentsByGrade(grade));
+    }
+
 }

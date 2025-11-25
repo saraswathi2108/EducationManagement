@@ -17,6 +17,7 @@ public class StudentExamResultDTO {
     private Double totalMarksObtained;
     private Double totalMarksMax;
     private Double percentage;
+    private String rollNumber;
 
     private Integer rank;
 

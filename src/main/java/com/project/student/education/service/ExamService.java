@@ -4,6 +4,7 @@ import com.project.student.education.DTO.*;
 import com.project.student.education.entity.ExamMaster;
 import com.project.student.education.entity.ExamRecord;
 import com.project.student.education.entity.IdGenerator;
+import com.project.student.education.entity.Student;
 import com.project.student.education.enums.ExamAttendanceStatus;
 import com.project.student.education.enums.ExamResultStatus;
 import com.project.student.education.enums.ExamStatus;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,30 +99,24 @@ public class ExamService {
                             "Record not found for student: " + entry.getStudentId()
                     ));
 
-            if (!record.getSubjectId().equals(subjectId)) {
-                throw new RuntimeException(
-                        "Subject mismatch: expected " + subjectId +
-                                " but found " + record.getSubjectId()
-                );
-            }
+            // Auto Detect Present / Absent
+            boolean hasMarks =
+                    (entry.getPaperObtained() != null && entry.getPaperObtained() > 0) ||
+                            (entry.getAssignmentObtained() != null && entry.getAssignmentObtained() > 0);
 
             ExamAttendanceStatus attendance =
-                    ExamAttendanceStatus.valueOf(entry.getAttendanceStatus());
+                    hasMarks ? ExamAttendanceStatus.PRESENT : ExamAttendanceStatus.ABSENT;
+
             record.setAttendanceStatus(attendance);
 
-            switch (attendance) {
-                case PRESENT -> {
-                    record.setPaperObtained(entry.getPaperObtained());
-                    record.setPaperTotal(entry.getPaperTotal());
-
-                    record.setAssignmentObtained(entry.getAssignmentObtained());
-                    record.setAssignmentTotal(entry.getAssignmentTotal());
-                }
-
-                case ABSENT, MALPRACTICE, NOT_ALLOWED, DNR -> {
-                    record.setPaperObtained(0.0);
-                    record.setAssignmentObtained(0.0);
-                }
+            if (attendance == ExamAttendanceStatus.PRESENT) {
+                record.setPaperObtained(entry.getPaperObtained());
+                record.setPaperTotal(entry.getPaperTotal());
+                record.setAssignmentObtained(entry.getAssignmentObtained());
+                record.setAssignmentTotal(entry.getAssignmentTotal());
+            } else {
+                record.setPaperObtained(0.0);
+                record.setAssignmentObtained(0.0);
             }
 
             record.setRemarks(entry.getRemarks());
@@ -130,6 +126,7 @@ public class ExamService {
             examRecordRepo.save(record);
         }
     }
+
 
 
 
@@ -205,7 +202,7 @@ public class ExamService {
                             .assignmentTotal(assignMax)
                             .subjectTotalObtained(finalTotal)
                             .subjectTotalMax(finalMax)
-                            .attendanceStatus(r.getAttendanceStatus().name())
+                            .attendanceStatus(r.getAttendanceStatus())
                             .status(finalTotal >= r.getPassMarks() ? "PASS" : "FAIL")
                             .build()
             );
@@ -245,4 +242,84 @@ public class ExamService {
         ).toList();
     }
 
+    public List<StudentExamResultDTO> getClassExamResults(String examId, String classSectionId) {
+
+        // 1. Fetch all records for this Exam & Class
+        List<ExamRecord> records = examRecordRepo.findByExamIdAndClassSectionId(examId, classSectionId);
+
+        if (records.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. Group Records by Student ID
+        Map<String, List<ExamRecord>> studentRecordsMap = records.stream()
+                .collect(Collectors.groupingBy(ExamRecord::getStudentId));
+
+        List<StudentExamResultDTO> classResults = new ArrayList<>();
+
+        // 3. Process Each Student
+        for (Map.Entry<String, List<ExamRecord>> entry : studentRecordsMap.entrySet()) {
+            String studentId = entry.getKey();
+            List<ExamRecord> myRecords = entry.getValue();
+
+            double totalObtained = 0;
+            double totalMax = 0;
+            List<SubjectResultDTO> subjects = new ArrayList<>();
+
+            Student student = myRecords.get(0).getStudent();
+
+            for (ExamRecord r : myRecords) {
+                double pObt = r.getPaperObtained() != null ? r.getPaperObtained() : 0;
+                double pTot = r.getPaperTotal() != null ? r.getPaperTotal() : 0;
+                double aObt = r.getAssignmentObtained() != null ? r.getAssignmentObtained() : 0;
+                double aTot = r.getAssignmentTotal() != null ? r.getAssignmentTotal() : 0;
+
+                double subTotal = pObt + aObt;
+                double subMax = pTot + aTot;
+
+                totalObtained += subTotal;
+                totalMax += subMax;
+                String status = "FAIL";
+                if (r.getPassMarks() != null && subTotal >= r.getPassMarks()) {
+                    status = "PASS";
+                } else if (r.getPassMarks() == null) {
+                    status = (subTotal / subMax >= 0.35) ? "PASS" : "FAIL";
+                }
+
+                subjects.add(SubjectResultDTO.builder()
+                        .subjectId(r.getSubjectId())
+                        .subjectName(r.getSubject().getSubjectName())
+                        .paperObtained(pObt)
+                        .paperTotal(pTot)
+                        .assignmentObtained(aObt)
+                        .assignmentTotal(aTot)
+                        .subjectTotalObtained(subTotal)
+                        .subjectTotalMax(subMax)
+                        .attendanceStatus(r.getAttendanceStatus())
+                        .status(status)
+                        .build());
+            }
+
+            double percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
+
+            classResults.add(StudentExamResultDTO.builder()
+                    .studentId(studentId)
+                    .studentName(student.getFullName())
+                    .rollNumber(student.getRollNumber()) // Make sure to add this field to DTO if needed
+                    .totalMarksObtained(totalObtained)
+                    .totalMarksMax(totalMax)
+                    .percentage(percentage)
+                    .subjects(subjects)
+                    .build());
+        }
+
+        classResults.sort((a, b) -> Double.compare(b.getTotalMarksObtained(), a.getTotalMarksObtained()));
+
+        int rank = 1;
+        for (StudentExamResultDTO dto : classResults) {
+            dto.setRank(rank++);
+        }
+
+        return classResults;
+    }
 }

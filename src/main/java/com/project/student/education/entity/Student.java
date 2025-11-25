@@ -72,6 +72,8 @@ public class Student {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_section_id", referencedColumnName = "classSectionId")
     private ClassSection classSection;
+    private Double totalFee;
+
 
 
 
