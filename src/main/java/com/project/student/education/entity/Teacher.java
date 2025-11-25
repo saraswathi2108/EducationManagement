@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Teacher {
+public class Teacher  {
 
     @Id
     private String teacherId;
@@ -32,8 +32,14 @@ public class Teacher {
 
 
 
-//    @OneToMany(mappedBy = "teacher")
-//    private List<Subject> subjects;
+    @ElementCollection
+    @CollectionTable(
+            name = "teacher_subjects",
+            joinColumns = @JoinColumn(name = "teacher_id")
+    )
+    @Column(name = "subject_id")
+    private List<String> subjectIds;
+
 
 
     @OneToMany(mappedBy = "classTeacher")

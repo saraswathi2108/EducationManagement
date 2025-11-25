@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/student/transport")
 @RequiredArgsConstructor
@@ -40,9 +42,29 @@ public class TransportController {
         return ResponseEntity.ok(transportService.assignTransport(studentId, assignRequest));
     }
 
+    @PutMapping("/assign/{studentId}")
+    public ResponseEntity<StudentTransportDTO> updateTransport(
+            @PathVariable String studentId,
+            @RequestBody TransportAssignRequest assignRequest) {
+
+        return ResponseEntity.ok(
+                transportService.assignTransport(studentId, assignRequest)
+        );
+    }
     @GetMapping("/{studentId}")
     public ResponseEntity<StudentTransportDTO> getDetails(@PathVariable String studentId) {
         return ResponseEntity.ok(transportService.getStudentTransportDetails(studentId));
+    }
+
+
+    @GetMapping("/route/{routeId}/students")
+    public ResponseEntity<?> getStudentsByRoute(@PathVariable String routeId) {
+        return ResponseEntity.ok(transportService.getStudentsByRoute(routeId));
+    }
+
+    @GetMapping("/routes")
+    public ResponseEntity<List<TransportRoute>> getRoutes() {
+        return ResponseEntity.ok(transportService.getAllRoute());
     }
 
 

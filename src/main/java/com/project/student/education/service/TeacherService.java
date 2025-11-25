@@ -5,10 +5,7 @@ import com.project.student.education.DTO.TeacherDTO;
 import com.project.student.education.DTO.TeacherWeeklyTimetableDTO;
 import com.project.student.education.entity.*;
 import com.project.student.education.enums.Role;
-import com.project.student.education.repository.ClassSectionRepository;
-import com.project.student.education.repository.TeacherRepository;
-import com.project.student.education.repository.TimetableRepository;
-import com.project.student.education.repository.UserRepository;
+import com.project.student.education.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +29,8 @@ public class TeacherService {
     private final ModelMapper modelMapper;
     private final ClassSectionRepository classSectionRepository;
     private final TimetableRepository timetableRepository;
+    private final SubjectRepository subjectRepository;
+    private final ClassSubjectMappingRepository classSubjectMappingRepository;
 
     public TeacherDTO addTeacher(TeacherDTO dto) {
         if (teacherRepository.existsByEmail(dto.getEmail())) {
@@ -61,13 +60,21 @@ public class TeacherService {
                 .user(user)
                 .build();
 
+        // ✅ Save subjects teacher can teach (NO CLASS)
+        if (dto.getSubjectIds() != null && !dto.getSubjectIds().isEmpty()) {
+            teacher.setSubjectIds(dto.getSubjectIds());
+        }
+
         teacherRepository.save(teacher);
 
+        // ✅ Build response
         TeacherDTO response = modelMapper.map(teacher, TeacherDTO.class);
         response.setPassword(rawPassword);
+        response.setSubjectIds(teacher.getSubjectIds());
 
         return response;
     }
+
 
     public List<TeacherDTO> getAllTeachers() {
         return teacherRepository.findAll()
@@ -83,6 +90,7 @@ public class TeacherService {
     }
 
     public TeacherDTO updateTeacher(String teacherId, TeacherDTO dto) {
+
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new RuntimeException("Teacher not found"));
 
@@ -94,9 +102,21 @@ public class TeacherService {
         teacher.setExperience(dto.getExperience());
         teacher.setAddress(dto.getAddress());
 
+        // ✅ Update subjects teacher can teach (NOT class assignment)
+        if (dto.getSubjectIds() != null) {
+            teacher.setSubjectIds(dto.getSubjectIds());
+        }
+
         teacherRepository.save(teacher);
-        return modelMapper.map(teacher, TeacherDTO.class);
+
+        // ✅ Return response including subjectIds
+        TeacherDTO response = modelMapper.map(teacher, TeacherDTO.class);
+        response.setSubjectIds(teacher.getSubjectIds());
+
+        return response;
     }
+
+
 
     public String deleteTeacher(String teacherId) {
         Teacher teacher = teacherRepository.findById(teacherId)

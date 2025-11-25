@@ -12,5 +12,8 @@ import java.util.List;
 public class TimetableDayDTO {
     private LocalDate examDate;
     private String dayName;
+    private String className;
+    private String sectionName;
+
     private List<TimetableSubjectDTO> subjects;
 }

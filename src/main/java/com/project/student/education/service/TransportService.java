@@ -11,6 +11,9 @@ import com.project.student.education.repository.TransportRouteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 
@@ -99,6 +102,51 @@ public class TransportService {
                 .orElseThrow(() -> new RuntimeException("Transport not assigned"));
 
         return mapToDTO(st);
+    }
+
+    public List<StudentTransportDTO> getStudentsByRoute(String routeId) {
+
+        List<StudentTransport> assignments =
+                studentTransportRepository.findByRoute_RouteId(routeId);
+
+        if (assignments.isEmpty()) {
+            throw new RuntimeException("No students assigned to this route");
+        }
+
+        List<StudentTransportDTO> result = new ArrayList<>();
+
+        for (StudentTransport assign : assignments) {
+
+            StudentTransportDTO dto = new StudentTransportDTO();
+
+
+            dto.setStudentId(assign.getStudentId());
+
+
+            dto.setRouteName(assign.getRoute().getRouteName());
+            dto.setPickupStop(assign.getPickupStop());
+            dto.setDropStop(assign.getDropStop());
+
+            dto.setPickupTime(assign.getPickupTime());
+            dto.setDropTime(assign.getDropTime());
+
+            if (assign.getRoute() != null) {
+                dto.setVehicleName(assign.getRoute().getVehicleName());
+                dto.setVehicleNumber(assign.getRoute().getVehicleNumber());
+                dto.setDriverName(assign.getRoute().getDriverName());
+                dto.setDriverPhone(assign.getRoute().getDriverPhone());
+            }
+
+            dto.setFeeStatus(assign.getFeeStatus());
+
+            result.add(dto);
+        }
+
+        return result;
+    }
+
+    public List<TransportRoute> getAllRoute() {
+        return transportRouteRepository.findAll();
     }
 
 }

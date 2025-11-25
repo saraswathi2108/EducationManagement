@@ -116,7 +116,6 @@ public class ExamSchedulingService {
     }
 
 
-
     @Transactional(readOnly = true)
     public List<TimetableDayDTO> getTimetable(String examId, String classSectionId) {
 
@@ -162,7 +161,6 @@ public class ExamSchedulingService {
     }
 
 
-
     private void validateScheduleInput(ExamRecordDTO dto) {
         if (!examRepo.existsById(dto.getExamId()))
             throw new EntityNotFoundException("Exam not found");
@@ -187,11 +185,11 @@ public class ExamSchedulingService {
         subjectRepo.findById(subjectId)
                 .orElseThrow(() -> new EntityNotFoundException("Subject not found: " + subjectId));
 
-                classSubjectRepo
-                        .findByClassSection_ClassSectionIdAndSubject_SubjectId(request.getClassSectionId(), subjectId)
-                        .orElseThrow(() -> new EntityNotFoundException(
-                                "Subject " + subjectId + " does NOT belong to class section " + request.getClassSectionId()
-                        ));
+        classSubjectRepo
+                .findByClassSection_ClassSectionIdAndSubject_SubjectId(request.getClassSectionId(), subjectId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Subject " + subjectId + " does NOT belong to class section " + request.getClassSectionId()
+                ));
 
         request.setSubjectId(subjectId);
 
@@ -291,19 +289,50 @@ public class ExamSchedulingService {
     }
 
 
+    public List<TimetableDayDTO> getTeacherClassExamTimetable(String examId) {
 
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) auth.getPrincipal();
 
-    public List<TimetableDayDTO> getTeacherClassExamTimetable(String examId, String teacherId) {
+        Teacher teacher = teacherRepo.findByUser_Id(user.getId())
+                .orElseThrow(() -> new RuntimeException("Teacher not found for logged-in user"));
+
+        String teacherId = teacher.getTeacherId();
 
         ClassSection classSection = classRepo.findByClassTeacher_TeacherId(teacherId)
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("No class assigned to this teacher"));
 
-        return getTimetable(examId, classSection.getClassSectionId());
+        List<TimetableDayDTO> days = getTimetable(examId, classSection.getClassSectionId());
+
+        for (TimetableDayDTO day : days) {
+
+            day.setClassName(classSection.getClassName());
+            day.setSectionName(classSection.getSection());
+
+            if (day.getSubjects() != null) {
+                day.getSubjects().forEach(sub -> {
+                    sub.setClassName(classSection.getClassName());
+                    sub.setSectionName(classSection.getSection());
+                });
+            }
+        }
+
+        return days;
     }
 
-    public List<TimetableDayDTO> getTeacherSubjectExamTimetable(String examId, String teacherId) {
+
+
+    public List<TimetableDayDTO> getTeacherSubjectExamTimetable(String examId) {
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) auth.getPrincipal();
+
+        Teacher teacher = teacherRepo.findByUser_Id(user.getId())
+                .orElseThrow(() -> new RuntimeException("Teacher not found for logged-in user"));
+
+        String teacherId = teacher.getTeacherId();
         List<ClassSubjectMapping> mappings =
                 classSubjectRepo.findByTeacher_TeacherId(teacherId);
 
@@ -317,11 +346,11 @@ public class ExamSchedulingService {
             String classSectionId = m.getClassSection().getClassSectionId();
             String subjectId = m.getSubject().getSubjectId();
 
-            // 3️⃣ Fetch exam records for this subject in this class
             List<ExamRecord> subjectRecords =
                     recordRepo.findByExamIdAndClassSectionIdAndSubjectId(
                             examId, classSectionId, subjectId
                     );
+
             for (ExamRecord r : subjectRecords) {
 
                 LocalDate examDate = r.getExamDate();
@@ -331,9 +360,12 @@ public class ExamSchedulingService {
                     TimetableDayDTO dto = new TimetableDayDTO();
                     dto.setExamDate(d);
                     dto.setDayName(d.getDayOfWeek().name());
+                    dto.setClassName(m.getClassSection().getClassName());
+                    dto.setSectionName(m.getClassSection().getSection());
                     dto.setSubjects(new ArrayList<>());
                     return dto;
                 });
+
 
                 TimetableSubjectDTO subDto = new TimetableSubjectDTO();
                 subDto.setSubjectId(r.getSubjectId());
@@ -341,12 +373,16 @@ public class ExamSchedulingService {
                 subDto.setStartTime(r.getStartTime().toString());
                 subDto.setEndTime(r.getEndTime().toString());
                 subDto.setRoomNumber(r.getRoomNumber());
-
+                if (r.getClassSection() != null) {
+                    subDto.setClassName(r.getClassSection().getClassName());
+                    subDto.setSectionName(r.getClassSection().getSection());
+                }
                 map.get(examDate).getSubjects().add(subDto);
             }
         }
 
         return new ArrayList<>(map.values());
     }
+
 
 }

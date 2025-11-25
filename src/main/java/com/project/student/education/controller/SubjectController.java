@@ -93,7 +93,7 @@ public class SubjectController {
         return ResponseEntity.ok(Map.of("message", subjectService.assignTeacherToSubject(dto)));
     }
 
-    @GetMapping("/{classSectionId}")
+    @GetMapping("/{classSectionId}/teachers")
     public ResponseEntity<?> getSubjectTeacherMapping(@PathVariable String classSectionId) {
         return ResponseEntity.ok(subjectService.getMappingForClass(classSectionId));
     }

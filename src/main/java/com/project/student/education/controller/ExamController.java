@@ -86,22 +86,29 @@ public class ExamController {
     public ResponseEntity<List<TimetableDayDTO>> getTeacherClassExamTimetable(
             @PathVariable String examId
     ) {
-        String teacherId = SecurityContextHolder.getContext().getAuthentication().getName();
-
         return ResponseEntity.ok(
-                schedulingService.getTeacherClassExamTimetable(examId, teacherId)
+                schedulingService.getTeacherClassExamTimetable(examId)
         );
     }
+
     @GetMapping("/teacher/subject/{examId}")
     public ResponseEntity<List<TimetableDayDTO>> getTeacherSubjectExamTimetable(
             @PathVariable String examId
     ) {
-        String teacherId = SecurityContextHolder.getContext().getAuthentication().getName();
-
         return ResponseEntity.ok(
-                schedulingService.getTeacherSubjectExamTimetable(examId, teacherId)
+                schedulingService.getTeacherSubjectExamTimetable(examId)
         );
     }
+//    @GetMapping("/results/{examId}/student/{studentId}")
+//    public ResponseEntity<StudentExamResultDTO> getStudentExamResult(
+//            @PathVariable String examId,
+//            @PathVariable String studentId) {
+//
+//        return ResponseEntity.ok(
+//                schedulingService.getStudentExamResult(examId, studentId)
+//        );
+//    }
+
 
 
 

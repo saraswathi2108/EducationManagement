@@ -4,6 +4,7 @@ import com.project.student.education.DTO.ClassSectionMiniDTO;
 import com.project.student.education.DTO.TeacherDTO;
 import com.project.student.education.service.TeacherService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TeacherController {
 
-    private final TeacherService teacherService;
+    @Autowired
+    private TeacherService teacherService;
 
     @PostMapping("/add")
     public ResponseEntity<TeacherDTO> addTeacher(@RequestBody TeacherDTO dto) {

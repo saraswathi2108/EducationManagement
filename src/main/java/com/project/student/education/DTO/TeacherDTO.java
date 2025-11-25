@@ -2,6 +2,8 @@ package com.project.student.education.DTO;
 
 import lombok.*;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,5 +19,8 @@ public class TeacherDTO {
     private int experience;
     private String address;
     private String password;
+    private List<String> subjectIds;
+    private List<String> subjectNames;
+
 
 }
