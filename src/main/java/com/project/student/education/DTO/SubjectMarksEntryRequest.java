@@ -14,5 +14,5 @@ public class SubjectMarksEntryRequest {
     private String classSectionId;
     private String subjectId;
 
-    private List<SubjectWiseMarksEntryDTO> entries;
+    private List<MarksEntryRequest> entries;
 }

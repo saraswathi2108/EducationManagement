@@ -83,40 +83,38 @@ public class ExamService {
 
 
     @Transactional
-    public void enterMarks(String subjectId, List<MarksEntryRequest> list) {
+    public void enterMarks(String subjectId, SubjectMarksEntryRequest request) {
 
-        for (MarksEntryRequest req : list) {
+        for (MarksEntryRequest entry : request.getEntries()) {
 
-            ExamRecord record = examRecordRepo.findById(req.getRecordId())
-                    .orElseThrow(() -> new RuntimeException("Record not found: " + req.getRecordId()));
+            ExamRecord record = examRecordRepo
+                    .findByExamIdAndStudentIdAndSubjectId(
+                            request.getExamId(),
+                            entry.getStudentId(),
+                            subjectId
+                    )
+                    .orElseThrow(() -> new RuntimeException(
+                            "Record not found for student: " + entry.getStudentId()
+                    ));
 
             if (!record.getSubjectId().equals(subjectId)) {
                 throw new RuntimeException(
-                        "Subject mismatch! Expected: " + subjectId +
-                                " but record belongs to: " + record.getSubjectId()
+                        "Subject mismatch: expected " + subjectId +
+                                " but found " + record.getSubjectId()
                 );
             }
 
-            ExamAttendanceStatus attendance = ExamAttendanceStatus.valueOf(req.getAttendanceStatus());
+            ExamAttendanceStatus attendance =
+                    ExamAttendanceStatus.valueOf(entry.getAttendanceStatus());
             record.setAttendanceStatus(attendance);
 
             switch (attendance) {
-
                 case PRESENT -> {
-                    record.setPaperObtained(
-                            req.getPaperObtained() == null ? 0.0 : req.getPaperObtained()
-                    );
-                    record.setPaperTotal(
-                            req.getPaperTotal() == null ? record.getPaperTotal() : req.getPaperTotal()
-                    );
+                    record.setPaperObtained(entry.getPaperObtained());
+                    record.setPaperTotal(entry.getPaperTotal());
 
-                    // ASSIGNMENT MARKS
-                    record.setAssignmentObtained(
-                            req.getAssignmentObtained() == null ? 0.0 : req.getAssignmentObtained()
-                    );
-                    record.setAssignmentTotal(
-                            req.getAssignmentTotal() == null ? record.getAssignmentTotal() : req.getAssignmentTotal()
-                    );
+                    record.setAssignmentObtained(entry.getAssignmentObtained());
+                    record.setAssignmentTotal(entry.getAssignmentTotal());
                 }
 
                 case ABSENT, MALPRACTICE, NOT_ALLOWED, DNR -> {
@@ -125,12 +123,16 @@ public class ExamService {
                 }
             }
 
+            record.setRemarks(entry.getRemarks());
             record.setResultStatus(ExamResultStatus.ENTERED);
             record.setUpdatedAt(LocalDateTime.now());
 
             examRecordRepo.save(record);
         }
     }
+
+
+
 
     @Transactional
     public void publishResult(String examId, String classSectionId, String adminName) {

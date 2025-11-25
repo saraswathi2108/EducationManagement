@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ExamRecordRepository extends JpaRepository<ExamRecord, Long> {
 
@@ -31,4 +32,8 @@ public interface ExamRecordRepository extends JpaRepository<ExamRecord, Long> {
     boolean existsByExamIdAndClassSectionIdAndSubjectIdAndStudentId(String examId, String classSectionId, String subjectId, String studentId);
 
     boolean existsByExamIdAndClassSectionIdAndExamDateAndStartTimeAndEndTime(String examId, String classId, LocalDate examDate, LocalTime startTime, LocalTime endTime);
+
+
+
+    Optional<ExamRecord> findByExamIdAndStudentIdAndSubjectId(String examId, String studentId, String subjectId);
 }

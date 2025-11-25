@@ -111,11 +111,14 @@ public class ExamController {
     @PutMapping("/enter-marks/{subjectId}")
     public ResponseEntity<String> enterMarks(
             @PathVariable String subjectId,
-            @RequestBody List<MarksEntryRequest> entries) {
+            @RequestBody SubjectMarksEntryRequest request) {
 
-        examService.enterMarks(subjectId, entries);
+        examService.enterMarks(subjectId, request);
         return ResponseEntity.ok("Marks saved successfully for subject " + subjectId);
     }
+
+
+
     @PutMapping("/publish/{examId}/{classSectionId}")
     public ResponseEntity<String> publishResult(
             @PathVariable String examId,
