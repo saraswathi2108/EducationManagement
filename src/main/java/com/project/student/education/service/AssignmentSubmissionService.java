@@ -12,8 +12,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,10 +28,17 @@ public class AssignmentSubmissionService {
     private final AssignmentSubmissionRepository submissionRepository;
     private final AssignmentRepository assignmentRepository;
     private final ModelMapper modelMapper;
+    private final FileService fileService;
 
+    public String submitAssignment(
+            String assignmentId,
+            String subjectId,
+            AssignmentSubmissionDTO dto,
+            List<MultipartFile> relatedLinks
+    ) throws IOException {
 
-    public String submitAssignment(String assignmentId, String subjectId, AssignmentSubmissionDTO dto) {
-        log.info("Creating submission for assignmentId={}, subjectId={}, student={}", assignmentId, subjectId, dto.getStudentId());
+        log.info("Creating submission for assignmentId={}, subjectId={}, student={}",
+                assignmentId, subjectId, dto.getStudentId());
 
         Assignment assignment = assignmentRepository.findById(new AssignmentId(assignmentId, subjectId))
                 .orElseThrow(() -> new EntityNotFoundException("Assignment not found"));
@@ -41,22 +51,34 @@ public class AssignmentSubmissionService {
                 nextNumber
         );
 
+        // --------- FILE UPLOAD ---------
+        List<String> uploadedUrls = new ArrayList<>();
+
+        if (relatedLinks != null && !relatedLinks.isEmpty()) {
+            for (MultipartFile file : relatedLinks) {
+                String uploadedUrl = fileService.uploadFile(file);  // Save to S3/local
+                uploadedUrls.add(uploadedUrl);
+            }
+        }
+
+        // --------- CREATE ENTITY ---------
         AssignmentSubmission submission = AssignmentSubmission.builder()
                 .id(compositeId)
                 .assignment(assignment)
                 .studentId(dto.getStudentId())
                 .note(dto.getNote())
-                .relatedLinks(dto.getRelatedLinks())
-
+                .relatedLinks(uploadedUrls)
                 .status("SUBMITTED")
                 .submittedDate(LocalDateTime.now())
                 .build();
 
         submissionRepository.save(submission);
+
         log.info("Submission {} created successfully for assignment {}", nextNumber, assignmentId);
 
         return "Assignment submitted successfully";
     }
+
 
 
     public String reviewSubmission(String assignmentId, String subjectId, Long submissionNumber, AssignmentSubmissionDTO dto) {

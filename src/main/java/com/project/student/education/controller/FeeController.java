@@ -70,6 +70,17 @@ public class FeeController {
         return ResponseEntity.ok(feeService.createFeeForClass(req));
     }
 
+    @GetMapping("/admin/dashboard/stats")
+    public ResponseEntity<List<ClassFeeStatsDTO>> getAdminFeeStats() {
+        return ResponseEntity.ok(feeService.getAllClassesFeeStats());
+    }
+
+    @GetMapping("/admin/class-status/{classSectionId}")
+    public ResponseEntity<List<StudentFeeStatusDTO>> getClassFeeStatus(@PathVariable String classSectionId) {
+        return ResponseEntity.ok(feeService.getClassStudentFeeStatus(classSectionId));
+    }
+
+
 
 
 }

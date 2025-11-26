@@ -3,6 +3,7 @@ package com.project.student.education.repository;
 import com.project.student.education.entity.Student;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -30,4 +31,6 @@ public interface StudentRepository extends JpaRepository<Student, String> {
 
     Collection<Object> findByGradeAndClassSectionIsNull(String grade);
 
+    @Query("SELECT SUM(s.totalFee) FROM Student s WHERE s.classSection.classSectionId = :classSectionId")
+    Double getTotalFeeByClass(@Param("classSectionId") String classSectionId);
 }

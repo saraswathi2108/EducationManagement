@@ -2,6 +2,7 @@ package com.project.student.education.service;
 
 import com.project.student.education.DTO.*;
 import com.project.student.education.entity.*;
+import com.project.student.education.enums.FeeStatus;
 import com.project.student.education.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,8 @@ public class StudentService {
     @Autowired
     private AdmissionRepository admissionRepository;
 
+    @Autowired
+    private StudentFeeRepository studentFeeRepository;
     @Autowired
     private ClassSectionRepository classSectionRepository;
 
@@ -106,6 +109,21 @@ public class StudentService {
             String newImageUrl = fileService.updateFile(photo, existing.getProfileImageUrl());
             existing.setProfileImageUrl(newImageUrl);
         }
+        List<StudentFee> pendingZeroFees = studentFeeRepository.findByStudentId(studentId).stream()
+                .filter(f -> f.getStatus() == FeeStatus.PENDING && f.getAmount() == 0)
+                .collect(Collectors.toList());
+
+        if (!pendingZeroFees.isEmpty()) {
+            // Distribute new total fee equally among 0-value terms
+            // Example: If fee updated to 60,000 and there's 1 term with 0 fee -> it becomes 60,000.
+            double amountPerTerm = dto.getTotalFee() / pendingZeroFees.size();
+            for (StudentFee fee : pendingZeroFees) {
+                fee.setAmount(amountPerTerm);
+                studentFeeRepository.save(fee);
+            }
+        }
+
+
 
         Student updated = studentRepository.save(existing);
         return convertToDTO(updated);

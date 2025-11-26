@@ -3,11 +3,9 @@ package com.project.student.education.service;
 import com.project.student.education.DTO.*;
 import com.project.student.education.entity.*;
 import com.project.student.education.enums.FeeStatus;
-import com.project.student.education.repository.AdmissionRepository;
-import com.project.student.education.repository.PaymentRepository;
-import com.project.student.education.repository.StudentFeeRepository;
-import com.project.student.education.repository.StudentRepository;
+import com.project.student.education.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +24,8 @@ public class FeeService {
     private final PaymentRepository paymentRepo;
     private final AdmissionRepository admissionRepo;
     private final StudentRepository studentRepository;
+
+    private final ClassSectionRepository classSectionRepository;
 
     public StudentFee createFee(CreateFeeRequest req) {
         StudentFee fee = StudentFee.builder()
@@ -83,28 +83,20 @@ public class FeeService {
 
     public FeeSummaryDTO getSummary(String studentId) {
 
-        // Try Admission First
-        Optional<Admission> admissionOpt = admissionRepo.findByStudent_StudentId(studentId);
+        // Get student always from Student table
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        double totalFee;
+        double totalFee = student.getTotalFee() != null ? student.getTotalFee() : 0.0;
 
-        if (admissionOpt.isPresent()) {
-            Admission admission = admissionOpt.get();
-            totalFee = admission.getTotalFee() != null ? admission.getTotalFee() : 0.0;
-        } else {
-            // fallback to student table
-            Student student = studentRepository.findById(studentId)
-                    .orElseThrow(() -> new RuntimeException("Student not found"));
-
-            totalFee = student.getTotalFee() != null ? student.getTotalFee() : 0.0;
-        }
-
+        // Calculate paid amount
         double paid = feeRepo.findByStudentId(studentId).stream()
                 .mapToDouble(f -> f.getAmountPaid() == null ? 0.0 : f.getAmountPaid())
                 .sum();
 
         return new FeeSummaryDTO(totalFee, paid, totalFee - paid);
     }
+
 
 
     public List<StudentFeeDTO> getPendingFees(String studentId) {
@@ -197,4 +189,48 @@ public class FeeService {
                 .status("SUCCESS")
                 .build();
     }
+    public List<ClassFeeStatsDTO> getAllClassesFeeStats() {
+        List<ClassSection> allSections = classSectionRepository.findAll();
+        return allSections.stream().map(sec -> {
+            Double totalExpected = studentRepository.getTotalFeeByClass(sec.getClassSectionId());
+            Double totalPaid = feeRepo.getTotalPaidByClass(sec.getClassSectionId());
+            if(totalExpected == null) totalExpected = 0.0;
+            if(totalPaid == null) totalPaid = 0.0;
+            return ClassFeeStatsDTO.builder()
+                    .classSectionId(sec.getClassSectionId())
+                    .className(sec.getClassName())
+                    .section(sec.getSection())
+                    .totalExpectedFee(totalExpected)
+                    .totalCollectedFee(totalPaid)
+                    .totalPendingFee(totalExpected - totalPaid)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    // 2. Get Students List with Fee Status for a Specific Class
+    public List<StudentFeeStatusDTO> getClassStudentFeeStatus(String classSectionId) {
+        List<Student> students = studentRepository.findByClassSection_ClassSectionId(classSectionId);
+        return students.stream().map(s -> {
+            Double totalFee = s.getTotalFee() != null ? s.getTotalFee() : 0.0;
+            // Calculate total paid by this student from feeRepo
+            Double paid = feeRepo.findByStudentId(s.getStudentId()).stream()
+                    .mapToDouble(f -> f.getAmountPaid() == null ? 0.0 : f.getAmountPaid())
+                    .sum();
+            Double balance = totalFee - paid;
+            String status = (balance <= 0 && totalFee > 0) ? "PAID" : (paid > 0 ? "PARTIAL" : "PENDING");
+            return StudentFeeStatusDTO.builder()
+                    .studentId(s.getStudentId())
+                    .studentName(s.getFullName())
+                    .rollNumber(s.getRollNumber())
+                    .totalFee(totalFee)
+                    .paidAmount(paid)
+                    .balanceAmount(balance)
+                    .status(status)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+
+
+
 }

@@ -12,7 +12,9 @@ import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,29 +34,45 @@ public class AssignmentService {
     private IdGenerator idGenerator;
 
     @Autowired
+    private FileService fileService;
+
+    @Autowired
     private ModelMapper modelMapper;
     @Autowired
     private AssignmentRepository assignmentRepository;
 
-    public AssignmentDTO createAssignment(String teacherId, String subjectId, String classSectionId, AssignmentDTO assignmentDTO) {
+    public AssignmentDTO createAssignment(
+            String teacherId,
+            String subjectId,
+            String classSectionId,
+            AssignmentDTO assignmentDTO,
+            MultipartFile attachedFiles
+    ) throws IOException {
 
         Teacher teacher = teacherRepository.findById(teacherId)
-                .orElseThrow(()->new RuntimeException("Teacher Not Found"));
+                .orElseThrow(() -> new RuntimeException("Teacher Not Found"));
 
-        Subject subject=subjectRepository.findById(subjectId)
-                .orElseThrow(()->new RuntimeException("Subject Not Found"));
+        Subject subject = subjectRepository.findById(subjectId)
+                .orElseThrow(() -> new RuntimeException("Subject Not Found"));
 
-        ClassSection classSection=classSectionRepository.findById(classSectionId)
-                .orElseThrow(()-> new RuntimeException("Class Section Not Found"));
+        ClassSection classSection = classSectionRepository.findById(classSectionId)
+                .orElseThrow(() -> new RuntimeException("Class Section Not Found"));
 
-
-        if (assignmentRepository.existsByTitleAndSubject_SubjectIdAndClassSection_ClassSectionId(assignmentDTO.getTitle(),subjectId,classSectionId)){
+        if (assignmentRepository.existsByTitleAndSubject_SubjectIdAndClassSection_ClassSectionId(
+                assignmentDTO.getTitle(), subjectId, classSectionId)) {
             throw new RuntimeException("Assignment with same title already exists for this subject & class.");
-
         }
-        String newId=idGenerator.generateId("assignment");
-        Assignment assignment= Assignment.builder()
-                .id(new AssignmentId(newId,subjectId))
+
+
+        String fileUrl = null;
+        if (attachedFiles != null && !attachedFiles.isEmpty()) {
+            fileUrl = fileService.uploadFile(attachedFiles);
+        }
+
+        String newId = idGenerator.generateId("assignment");
+
+        Assignment assignment = Assignment.builder()
+                .id(new AssignmentId(newId, subjectId))
                 .title(assignmentDTO.getTitle())
                 .description(assignmentDTO.getDescription())
                 .createdBy(teacherId)
@@ -62,15 +80,14 @@ public class AssignmentService {
                 .status("ASSIGNED")
                 .assignedDate(LocalDate.now())
                 .dueDate(assignmentDTO.getDueDate())
-                .attachedFiles(assignmentDTO.getAttachedFiles())
+                .attachedFiles(fileUrl)
                 .teacher(teacher)
                 .subject(subject)
                 .classSection(classSection)
                 .build();
+
         Assignment saved = assignmentRepository.save(assignment);
         return toDTO(saved);
-
-
     }
 
     private AssignmentDTO toDTO(Assignment a) {
@@ -90,28 +107,41 @@ public class AssignmentService {
                 .build();
     }
 
+    public AssignmentDTO updateAssignment(
+            String subjectId,
+            String assignmentId,
+            AssignmentDTO dto,
+            MultipartFile attachedFiles
+    ) throws IOException {
 
-    public AssignmentDTO updateAssignment(String subjectId, String assignmentId, AssignmentDTO assignmentDTO) {
-        Assignment assignment = assignmentRepository.findById(new AssignmentId(assignmentId, subjectId))
-                .orElseThrow(() -> new RuntimeException("Assignment Not Found"));
-        if (assignmentDTO.getTitle() != null)
-            assignment.setTitle(assignmentDTO.getTitle());
+        Assignment assignment = assignmentRepository.findById(
+                new AssignmentId(assignmentId, subjectId)
+        ).orElseThrow(() -> new RuntimeException("Assignment Not Found"));
 
-        if (assignmentDTO.getDescription() != null)
-            assignment.setDescription(assignmentDTO.getDescription());
+        if (dto.getTitle() != null)
+            assignment.setTitle(dto.getTitle());
 
-        if (assignmentDTO.getDueDate() != null)
-            assignment.setDueDate(assignmentDTO.getDueDate());
+        if (dto.getDescription() != null)
+            assignment.setDescription(dto.getDescription());
 
-        if (assignmentDTO.getAttachedFiles() != null)
-            assignment.setAttachedFiles(assignmentDTO.getAttachedFiles());
+        if (dto.getDueDate() != null)
+            assignment.setDueDate(dto.getDueDate());
 
-        if (assignmentDTO.getStatus() != null)
-            assignment.setStatus(assignmentDTO.getStatus());
+        if (dto.getStatus() != null)
+            assignment.setStatus(dto.getStatus());
+
+        if (dto.getAttachedFiles() != null)
+            assignment.setAttachedFiles(dto.getAttachedFiles());
+
+        if (attachedFiles != null && !attachedFiles.isEmpty()) {
+            String fileUrl = fileService.uploadFile(attachedFiles);
+            assignment.setAttachedFiles(fileUrl);
+        }
 
         Assignment updated = assignmentRepository.save(assignment);
         return toDTO(updated);
     }
+
 
     public AssignmentDTO getAssignment(String subjectId, String assignmentId) {
         Assignment assignment=assignmentRepository.findById(new AssignmentId(assignmentId,subjectId))
