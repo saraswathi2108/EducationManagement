@@ -22,13 +22,13 @@ public class Assignment {
 
     private String title;
     private String description;
-    private String createdBy;      // teacherId
-    private String assignedTo;     // classSectionId
+    private String createdBy;
+    private String assignedTo;
     private String status;
-    private String priority;
+
     private LocalDate assignedDate;
     private LocalDate dueDate;
-    private String attachedFiles;  // could be filename or URL
+    private String attachedFiles;
 
     @ManyToOne
     @JoinColumn(name = "teacher_id")

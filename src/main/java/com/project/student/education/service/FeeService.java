@@ -115,6 +115,7 @@ public class FeeService {
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
+
     @Transactional
     public Payment pay(CreatePaymentRequest req) {
         StudentFee fee = feeRepo.findById(req.getFeeId())
@@ -142,6 +143,7 @@ public class FeeService {
 
         return payment;
     }
+
     public List<Payment> getPaymentHistory(String studentId) {
         return paymentRepo.findByStudentId(studentId);
     }
@@ -161,4 +163,38 @@ public class FeeService {
                 .build();
     }
 
+
+    public ClassFeeResponse createFeeForClass(ClassFeeRequest req) {
+
+        List<Student> students =
+                studentRepository.findByClassSection_ClassSectionId(req.getClassSectionId());
+
+        if (students.isEmpty()) {
+            throw new RuntimeException("No students found for class " + req.getClassSectionId());
+        }
+
+        for (Student s : students) {
+
+            StudentFee fee = StudentFee.builder()
+                    .feeId("FEE-" + UUID.randomUUID())
+                    .studentId(s.getStudentId())
+                    .feeName(req.getFeeName())
+                    .amount(req.getAmount())
+                    .amountPaid(0.0)
+                    .dueDate(req.getDueDate())
+                    .status(FeeStatus.PENDING)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            feeRepo.save(fee);
+        }
+
+        return ClassFeeResponse.builder()
+                .classSectionId(req.getClassSectionId())
+                .feeName(req.getFeeName())
+                .amount(req.getAmount())
+                .totalStudents(students.size())
+                .status("SUCCESS")
+                .build();
+    }
 }

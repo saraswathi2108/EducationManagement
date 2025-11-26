@@ -25,5 +25,4 @@ public class AssignmentSubmissionDTO {
     private String status;
 
     private List<String> relatedLinks;
-    private List<String> relatedFileLinks;
 }

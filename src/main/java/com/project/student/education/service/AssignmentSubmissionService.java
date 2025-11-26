@@ -47,7 +47,7 @@ public class AssignmentSubmissionService {
                 .studentId(dto.getStudentId())
                 .note(dto.getNote())
                 .relatedLinks(dto.getRelatedLinks())
-                .relatedFileLinks(dto.getRelatedFileLinks())
+
                 .status("SUBMITTED")
                 .submittedDate(LocalDateTime.now())
                 .build();
@@ -101,7 +101,6 @@ public class AssignmentSubmissionService {
                 .studentId(submission.getStudentId())
                 .note(submission.getNote())
                 .relatedLinks(submission.getRelatedLinks())
-                .relatedFileLinks(submission.getRelatedFileLinks())
                 .status(submission.getStatus())
                 .remark(submission.getRemark())
                 .reviewedBy(submission.getReviewedBy())

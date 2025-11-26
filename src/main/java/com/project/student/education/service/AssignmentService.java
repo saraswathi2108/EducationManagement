@@ -60,7 +60,6 @@ public class AssignmentService {
                 .createdBy(teacherId)
                 .assignedTo(classSectionId)
                 .status("ASSIGNED")
-                .priority(assignmentDTO.getPriority())
                 .assignedDate(LocalDate.now())
                 .dueDate(assignmentDTO.getDueDate())
                 .attachedFiles(assignmentDTO.getAttachedFiles())
@@ -85,7 +84,6 @@ public class AssignmentService {
                         ? a.getClassSection().getClassName() + a.getClassSection().getSection()
                         : a.getAssignedTo())
                 .status(a.getStatus())
-                .priority(a.getPriority())
                 .assignedDate(a.getAssignedDate())
                 .dueDate(a.getDueDate())
                 .attachedFiles(a.getAttachedFiles())
@@ -101,9 +99,6 @@ public class AssignmentService {
 
         if (assignmentDTO.getDescription() != null)
             assignment.setDescription(assignmentDTO.getDescription());
-
-        if (assignmentDTO.getPriority() != null)
-            assignment.setPriority(assignmentDTO.getPriority());
 
         if (assignmentDTO.getDueDate() != null)
             assignment.setDueDate(assignmentDTO.getDueDate());

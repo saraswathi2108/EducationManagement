@@ -65,5 +65,11 @@ public class FeeController {
         return ResponseEntity.ok(feeService.getFeeDashboard(studentId));
     }
 
+    @PostMapping("/admin/class-fee")
+    public ResponseEntity<ClassFeeResponse> createFeeForClass(@RequestBody ClassFeeRequest req) {
+        return ResponseEntity.ok(feeService.createFeeForClass(req));
+    }
+
+
 
 }

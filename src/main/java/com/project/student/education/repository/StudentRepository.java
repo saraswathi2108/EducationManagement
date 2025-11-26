@@ -29,4 +29,5 @@ public interface StudentRepository extends JpaRepository<Student, String> {
     List<Object[]> getGenderPercentage();
 
     Collection<Object> findByGradeAndClassSectionIsNull(String grade);
+
 }

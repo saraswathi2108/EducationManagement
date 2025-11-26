@@ -16,7 +16,6 @@ public class AssignmentDTO {
     private String createdBy;
     private String assignedTo;
     private String status;
-    private String priority;
     private LocalDate assignedDate;
     private LocalDate dueDate;
     private String attachedFiles;

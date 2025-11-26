@@ -24,9 +24,8 @@ public class AssignmentSubmission {
     private String note;
     private String remark;
     private String reviewedBy;
-    private String status;               // e.g., SUBMITTED / REVIEWED / APPROVED
-    private List<String> relatedLinks;   // URLs or text references
-    private List<String> relatedFileLinks; // Image/file names as Strings
+    private String status;
+    private List<String> relatedLinks;
 
     @ManyToOne
     @MapsId("assignmentId")
