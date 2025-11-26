@@ -1,10 +1,7 @@
 package com.project.student.education.controller;
 
 
-import com.project.student.education.DTO.CreateFeeRequest;
-import com.project.student.education.DTO.CreatePaymentRequest;
-import com.project.student.education.DTO.FeeSummaryDTO;
-import com.project.student.education.DTO.StudentFeeDTO;
+import com.project.student.education.DTO.*;
 import com.project.student.education.entity.Payment;
 import com.project.student.education.entity.StudentFee;
 import com.project.student.education.service.FeeService;
@@ -62,5 +59,11 @@ public class FeeController {
     public ResponseEntity<List<Payment>> history(@PathVariable String studentId) {
         return ResponseEntity.ok(feeService.getPaymentHistory(studentId));
     }
+
+    @GetMapping("/student/dashboard/{studentId}")
+    public ResponseEntity<FeeDashboardResponse> dashboard(@PathVariable String studentId) {
+        return ResponseEntity.ok(feeService.getFeeDashboard(studentId));
+    }
+
 
 }

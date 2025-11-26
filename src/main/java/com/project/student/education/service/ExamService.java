@@ -192,6 +192,16 @@ public class ExamService {
             totalObt += finalTotal;
             totalMax += finalMax;
 
+            // ⭐ SAFE PASS MARKS CHECK
+            Double passMarks = r.getPassMarks();
+            String status;
+
+            if (passMarks == null) {
+                status = "NA"; // No pass criteria set
+            } else {
+                status = finalTotal >= passMarks ? "PASS" : "FAIL";
+            }
+
             subjects.add(
                     SubjectResultDTO.builder()
                             .subjectId(r.getSubjectId())
@@ -203,7 +213,7 @@ public class ExamService {
                             .subjectTotalObtained(finalTotal)
                             .subjectTotalMax(finalMax)
                             .attendanceStatus(r.getAttendanceStatus())
-                            .status(finalTotal >= r.getPassMarks() ? "PASS" : "FAIL")
+                            .status(status)      // ⭐ Updated here
                             .build()
             );
         }
