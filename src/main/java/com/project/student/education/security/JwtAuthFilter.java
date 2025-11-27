@@ -29,7 +29,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = req.getRequestURI();
 
-        // ✅ Step 1: Skip authentication for public endpoints
         if (isPublicEndpoint(path)) {
             chain.doFilter(req, res);
             return;
@@ -43,7 +42,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
-        // ✅ Step 2: Validate and set authentication
         if (jwtService.validateToken(token)) {
             String username = jwtService.extractUsername(token);
             UserDetails user = userDetailsService.loadUserByUsername(username);
@@ -62,11 +60,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(req, res);
     }
 
-    // ✅ Step 3: Helper method to skip login, signup, refresh
+    // Helper method to skip login, signup, refresh
     private boolean isPublicEndpoint(String path) {
-        return path.startsWith("/api/auth")
+        return path.equals("/api/auth/login")
+                || path.equals("/api/auth/signup")
+                || path.equals("/api/auth/refresh-token")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/actuator");
     }
+
 }

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,6 +21,7 @@ public class AssignmentController {
     private AssignmentService assignmentService;
 
 
+    @PreAuthorize("hasRole('TEACHER')")
     @PostMapping(
             value = "/assignment/{teacherId}/{subjectId}/{classSectionId}",
             consumes = { MediaType.MULTIPART_FORM_DATA_VALUE }
@@ -39,6 +41,8 @@ public class AssignmentController {
     }
 
 
+
+    @PreAuthorize("hasRole('TEACHER')")
     @PutMapping(
             value = "/assignment/{subjectId}/{assignmentId}",
             consumes = { MediaType.MULTIPART_FORM_DATA_VALUE }
@@ -61,17 +65,21 @@ public class AssignmentController {
     }
 
 
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @GetMapping("/assignment/{subjectId}/{assignmentId}")
     public ResponseEntity<AssignmentDTO> getAssignment(@PathVariable String subjectId, @PathVariable String assignmentId) {
         AssignmentDTO assignmentDTO = assignmentService.getAssignment(subjectId, assignmentId);
         return new ResponseEntity<>(assignmentDTO, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('TEACHER')")
     @DeleteMapping("/assignment/{subjectId}/{assignmentId}")
     public ResponseEntity<AssignmentDTO> deleteAssignment(@PathVariable String subjectId, @PathVariable String assignmentId) {
         AssignmentDTO assignmentDTO = assignmentService.deleteAssignment(subjectId, assignmentId);
         return new ResponseEntity<>(assignmentDTO, HttpStatus.OK);
     }
+
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
 
     @GetMapping("/assignments/teacher/{teacherId}")
     public ResponseEntity<List<AssignmentDTO>> getAllAssignments(@PathVariable String teacherId) {
@@ -79,12 +87,14 @@ public class AssignmentController {
         return new ResponseEntity<>(assignmentDTO, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @GetMapping("/assignments/subject/{subjectId}")
     public ResponseEntity<List<AssignmentDTO>> getAllAssignmentsBySubject(@PathVariable String subjectId) {
         List<AssignmentDTO> assignmentDTOS = assignmentService.getAllAssignmentsBySubject(subjectId);
         return new ResponseEntity<>(assignmentDTOS, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @GetMapping("/assignments/class/{classSectionId}")
     public ResponseEntity<List<AssignmentDTO>> getAllAssignmentsByClass(@PathVariable String classSectionId) {
         List<AssignmentDTO> assignmentDTOS = assignmentService.getAllAssignmentsByClass(classSectionId);

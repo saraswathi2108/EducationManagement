@@ -20,7 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity  // enables @PreAuthorize and @Secured
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -28,26 +28,29 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
 
 
+    // ---------------- PASSWORD ENCODER ----------------
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ 2. Authentication provider setup
+    // ---------------- AUTH PROVIDER ----------------
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
     }
 
-    // ✅ 3. Authentication manager (for login endpoint)
+    // ---------------- AUTH MANAGER ----------------
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+
+    // ---------------- SECURITY FILTER CHAIN ----------------
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -56,25 +59,32 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny()))
+
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Allow these endpoints for everyone (no authentication)
+
+                        // ---------- Public Endpoints ----------
                         .requestMatchers(
-                                "/api/auth/**",              // login, signup, refresh
+                                "/api/auth/login",
+                                "/api/auth/signup",
+                                "/api/auth/refresh-token",
                                 "/api/student/admission",
-                                "/api/student/admissions",// public admission form
+                                "/api/student/admissions",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/actuator/**"
+                                "/actuator/**",
+                                "/api/notifications/**"
                         ).permitAll()
 
+                        // ---------- Change password (authenticated only) ----------
+                        .requestMatchers("/api/auth/change-password").authenticated()
 
-                        // ✅ Everything else requires authentication
-                        .anyRequest().permitAll()
+                        // ---------- All other APIs require JWT login ----------
+                        .anyRequest().authenticated()
                 )
+
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 }

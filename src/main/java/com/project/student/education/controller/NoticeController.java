@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,16 +20,21 @@ public class NoticeController {
     @Autowired
     private NoticeService noticeService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<Notice> create(@RequestBody Notice notice) {
         Notice notice1 = noticeService.create(notice);
         return ResponseEntity.ok().body(notice1);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
+
     @GetMapping("/get/{id}")
     private ResponseEntity<Notice>getNotice(@PathVariable String id) {
         return ResponseEntity.ok(noticeService.getNotice(id));
     }
+    @PreAuthorize("hasRole('ADMIN')")
+
     @PutMapping("/update/{id}")
     public ResponseEntity<Notice> updateNotice(
             @PathVariable String id,
@@ -38,11 +44,16 @@ public class NoticeController {
     }
 
 
+    @PreAuthorize("hasRole('ADMIN')")
+
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteNotice(@PathVariable String id) {
         noticeService.delete(id);
         return ResponseEntity.ok("Notice deleted successfully");
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
+
     @GetMapping("/all")
     public ResponseEntity<List<Notice>> getAllNotices() {
         return ResponseEntity.ok(noticeService.getAll());

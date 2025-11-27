@@ -29,6 +29,7 @@ public class AssignmentSubmissionService {
     private final AssignmentRepository assignmentRepository;
     private final ModelMapper modelMapper;
     private final FileService fileService;
+    private final NotificationService notificationService;
 
     public String submitAssignment(
             String assignmentId,
@@ -51,7 +52,6 @@ public class AssignmentSubmissionService {
                 nextNumber
         );
 
-        // --------- FILE UPLOAD ---------
         List<String> uploadedUrls = new ArrayList<>();
 
         if (relatedLinks != null && !relatedLinks.isEmpty()) {
@@ -61,7 +61,6 @@ public class AssignmentSubmissionService {
             }
         }
 
-        // --------- CREATE ENTITY ---------
         AssignmentSubmission submission = AssignmentSubmission.builder()
                 .id(compositeId)
                 .assignment(assignment)
@@ -75,6 +74,14 @@ public class AssignmentSubmissionService {
         submissionRepository.save(submission);
 
         log.info("Submission {} created successfully for assignment {}", nextNumber, assignmentId);
+        String teacherId=assignment.getTeacher().getTeacherId();
+        notificationService.sendNotification(
+                teacherId,
+                "Assignment submission ",
+                "Student" + dto.getStudentId()
+                + "assignment submitted" + assignment.getTitle() +  "'.",
+                "ASSIGNMENT"
+        );
 
         return "Assignment submitted successfully";
     }

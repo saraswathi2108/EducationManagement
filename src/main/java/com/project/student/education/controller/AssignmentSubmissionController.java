@@ -18,6 +18,8 @@ public class AssignmentSubmissionController {
 
     private final AssignmentSubmissionService submissionService;
 
+
+    @PreAuthorize("hasAnyRole('STUDENT')")
     @PostMapping(
             value = "/{assignmentId}/{subjectId}",
             consumes = { MediaType.MULTIPART_FORM_DATA_VALUE }
@@ -37,6 +39,7 @@ public class AssignmentSubmissionController {
 
 
 
+    @PreAuthorize("hasAnyRole('STUDENT')")
     @PutMapping("/{assignmentId}/{subjectId}/{submissionNumber}")
     public ResponseEntity<String> reviewSubmission(
             @PathVariable String assignmentId,
@@ -46,7 +49,7 @@ public class AssignmentSubmissionController {
         return ResponseEntity.ok(submissionService.reviewSubmission(assignmentId, subjectId, submissionNumber, dto));
     }
 
-
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @GetMapping("/{assignmentId}/{subjectId}/all")
     public ResponseEntity<List<AssignmentSubmissionDTO>> getAllSubmissions(
             @PathVariable String assignmentId,
@@ -54,6 +57,7 @@ public class AssignmentSubmissionController {
         return ResponseEntity.ok(submissionService.getSubmissions(assignmentId, subjectId));
     }
 
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @GetMapping("/student/{studentId}")
     public ResponseEntity<List<AssignmentSubmissionDTO>> getSubmissionsByStudent(
             @PathVariable String studentId) {

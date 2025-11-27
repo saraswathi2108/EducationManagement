@@ -32,6 +32,7 @@ public class AttendanceService {
     private final StudentRepository studentRepository;
     private final HolidayRepository holidayRepository;
 
+    private final NotificationService notificationService;
 
     public AttendanceRequest markAttendance(AttendanceRequest request, String markedByTeacherId) {
 
@@ -70,6 +71,16 @@ public class AttendanceService {
                     .build();
 
             attendanceRepository.save(a);
+            if (entry.getStatus().equalsIgnoreCase("A") ||
+                    entry.getStatus().equalsIgnoreCase("ABSENT")) {
+
+                notificationService.sendNotification(
+                        entry.getStudentId(),
+                        "Absent Today",
+                        "You have been marked ABSENT today (" + request.getDate() + ").",
+                        "ATTENDANCE"
+                );
+            }
         }
 
         return request;
@@ -95,7 +106,6 @@ public class AttendanceService {
                         (s1, s2) -> s1
                 ));
 
-        // Fetch holidays
         List<Holiday> holidayList = holidayRepository.findByDateBetween(start, end);
         Set<LocalDate> holidayDates = holidayList.stream()
                 .map(Holiday::getDate)
@@ -107,24 +117,18 @@ public class AttendanceService {
 
         List<AttendanceViewDTO.Daily> dailyList = new ArrayList<>();
 
-        // Loop through real calendar days
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
 
             String status;
 
-            // 1️⃣ Sunday → HOLIDAY
             if (date.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 status = "HOLIDAY";
                 holidayCount++;
             }
-
-            // 2️⃣ DB holiday → HOLIDAY
             else if (holidayDates.contains(date)) {
                 status = "HOLIDAY";
                 holidayCount++;
             }
-
-            // 3️⃣ Attendance exists → PRESENT / ABSENT
             else if (attendanceMap.containsKey(date)) {
                 String val = attendanceMap.get(date);
 
@@ -138,16 +142,12 @@ public class AttendanceService {
                     status = "NOT_MARKED";
                 }
             }
-
-            // 4️⃣ No record → NOT_MARKED
             else {
                 status = "NOT_MARKED";
             }
 
             dailyList.add(new AttendanceViewDTO.Daily(date, status));
         }
-
-        // working days = present + absent
         double workingDays = present + absent;
         double percentage = workingDays == 0 ? 0 : (present * 100.0) / workingDays;
 
@@ -162,20 +162,14 @@ public class AttendanceService {
     }
 
     public List<Map<String, Object>> getClassAttendanceForDate(String classSectionId, LocalDate date) {
-
-        // Validate class
         if (!classSectionRepository.existsById(classSectionId)) {
             throw new RuntimeException("Class section not found: " + classSectionId);
         }
-
-        // Get all students of this class
         List<Student> students = studentRepository.findByClassSection_ClassSectionId(classSectionId);
 
         if (students.isEmpty()) {
             throw new RuntimeException("No students found for class " + classSectionId);
         }
-
-        // Fetch attendance entries for this date for all students
         List<StudentAttendance> attList =
                 attendanceRepository.findByClassSectionIdAndDate(classSectionId, date);
 
@@ -184,8 +178,6 @@ public class AttendanceService {
                         StudentAttendance::getStudentId,
                         a -> a.getStatus().toUpperCase()
                 ));
-
-        // Check if holiday
         boolean isSunday = date.getDayOfWeek() == DayOfWeek.SUNDAY;
         boolean isHoliday = holidayRepository.existsByDate(date);
 

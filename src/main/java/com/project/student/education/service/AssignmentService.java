@@ -40,6 +40,8 @@ public class AssignmentService {
     private ModelMapper modelMapper;
     @Autowired
     private AssignmentRepository assignmentRepository;
+    @Autowired
+    private  NotificationService notificationService   ;
 
     public AssignmentDTO createAssignment(
             String teacherId,
@@ -87,25 +89,21 @@ public class AssignmentService {
                 .build();
 
         Assignment saved = assignmentRepository.save(assignment);
+        List<Student> students = classSection.getStudents();
+
+        for (Student s : students) {
+            notificationService.sendNotification(
+                    s.getStudentId(),
+                    "New Assignment Assigned",
+                    "A new assignment '" + saved.getTitle() +
+                            "' has been assigned. Due on: " + saved.getDueDate(),
+                    "ASSIGNMENT"
+            );
+        }
         return toDTO(saved);
     }
 
-    private AssignmentDTO toDTO(Assignment a) {
-        return AssignmentDTO.builder()
-                .assignmentId(a.getId().getAssignmentId())
-                .subjectId(a.getId().getSubjectId())
-                .title(a.getTitle())
-                .description(a.getDescription())
-                .createdBy(a.getTeacher() != null ? a.getTeacher().getTeacherName() : a.getCreatedBy())
-                .assignedTo(a.getClassSection() != null
-                        ? a.getClassSection().getClassName() + a.getClassSection().getSection()
-                        : a.getAssignedTo())
-                .status(a.getStatus())
-                .assignedDate(a.getAssignedDate())
-                .dueDate(a.getDueDate())
-                .attachedFiles(a.getAttachedFiles())
-                .build();
-    }
+
 
     public AssignmentDTO updateAssignment(
             String subjectId,
@@ -139,6 +137,18 @@ public class AssignmentService {
         }
 
         Assignment updated = assignmentRepository.save(assignment);
+        ClassSection classSection = assignment.getClassSection();
+        List<Student> students = classSection.getStudents();
+
+        for (Student s : students) {
+            notificationService.sendNotification(
+                    s.getStudentId(),
+                    "Assignment Updated",
+                    "The assignment '" + updated.getTitle() +
+                            "' has been updated. Please check the latest details.",
+                    "ASSIGNMENT"
+            );
+        }
         return toDTO(updated);
     }
 
@@ -196,5 +206,21 @@ public class AssignmentService {
 
         }
         return  assignment.stream().map(this::toDTO).collect(Collectors.toList());
+    }
+    private AssignmentDTO toDTO(Assignment a) {
+        return AssignmentDTO.builder()
+                .assignmentId(a.getId().getAssignmentId())
+                .subjectId(a.getId().getSubjectId())
+                .title(a.getTitle())
+                .description(a.getDescription())
+                .createdBy(a.getTeacher() != null ? a.getTeacher().getTeacherName() : a.getCreatedBy())
+                .assignedTo(a.getClassSection() != null
+                        ? a.getClassSection().getClassName() + a.getClassSection().getSection()
+                        : a.getAssignedTo())
+                .status(a.getStatus())
+                .assignedDate(a.getAssignedDate())
+                .dueDate(a.getDueDate())
+                .attachedFiles(a.getAttachedFiles())
+                .build();
     }
 }

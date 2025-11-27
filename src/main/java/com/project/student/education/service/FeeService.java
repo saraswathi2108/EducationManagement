@@ -5,13 +5,12 @@ import com.project.student.education.entity.*;
 import com.project.student.education.enums.FeeStatus;
 import com.project.student.education.repository.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -22,13 +21,59 @@ public class FeeService {
     private final IdGenerator idGenerator;
     private final StudentFeeRepository feeRepo;
     private final PaymentRepository paymentRepo;
-    private final AdmissionRepository admissionRepo;
     private final StudentRepository studentRepository;
-
     private final ClassSectionRepository classSectionRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
+    @Transactional
     public StudentFee createFee(CreateFeeRequest req) {
-        StudentFee fee = StudentFee.builder()
+        if (req.isExtra()) {
+            updateStudentTotalFee(req.getStudentId(), req.getAmount());
+        }
+
+        StudentFee fee = buildFee(req);
+        notificationService.sendNotification(
+                req.getStudentId(),
+                "New Fee Assigned",
+                "A new fee '" + req.getFeeName() + "' of ₹" + req.getAmount() + " is assigned. Due on: " + req.getDueDate(),
+                "FEE"
+        );
+
+        return feeRepo.save(fee);
+    }
+
+    @Transactional
+    public List<StudentFee> bulkCreate(List<CreateFeeRequest> reqs) {
+        List<StudentFee> fees = new ArrayList<>();
+
+        for (CreateFeeRequest req : reqs) {
+            if (req.isExtra()) {
+                updateStudentTotalFee(req.getStudentId(), req.getAmount());
+            }
+            fees.add(buildFee(req));
+
+            notificationService.sendNotification(
+                    req.getStudentId(),
+                    "New Fee Assigned",
+                    "A new fee '" + req.getFeeName() + "' of ₹" + req.getAmount() + " is assigned.",
+                    "FEE"
+            );
+        }
+        return feeRepo.saveAll(fees);
+    }
+
+    private void updateStudentTotalFee(String studentId, Double amount) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+        double currentTotal = student.getTotalFee() != null ? student.getTotalFee() : 0.0;
+        student.setTotalFee(currentTotal + amount);
+        studentRepository.save(student);
+    }
+
+    // Helper to build Fee Object
+    private StudentFee buildFee(CreateFeeRequest req) {
+        return StudentFee.builder()
                 .feeId(idGenerator.generateId("FEE"))
                 .studentId(req.getStudentId())
                 .feeName(req.getFeeName())
@@ -38,25 +83,6 @@ public class FeeService {
                 .status(FeeStatus.PENDING)
                 .createdAt(LocalDateTime.now())
                 .build();
-        return feeRepo.save(fee);
-    }
-
-    public List<StudentFee> bulkCreate(List<CreateFeeRequest> list) {
-        List<StudentFee> fees = list.stream()
-                .map(r -> StudentFee.builder()
-                        .feeId(idGenerator.generateId("FEE"))
-                        .studentId(r.getStudentId())
-                        .feeName(r.getFeeName())
-                        .amount(r.getAmount())
-                        .amountPaid(0.0)
-                        .dueDate(r.getDueDate())
-                        .status(FeeStatus.PENDING)
-                        .createdAt(LocalDateTime.now())
-                        .build()
-                )
-                .collect(Collectors.toList());
-
-        return feeRepo.saveAll(fees);
     }
 
     public List<StudentFeeDTO> getAllFees(String studentId) {
@@ -82,8 +108,7 @@ public class FeeService {
     }
 
     public FeeSummaryDTO getSummary(String studentId) {
-
-        // Get student always from Student table
+        // Get student always from Student table to reflect updated Total Fee
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
@@ -96,8 +121,6 @@ public class FeeService {
 
         return new FeeSummaryDTO(totalFee, paid, totalFee - paid);
     }
-
-
 
     public List<StudentFeeDTO> getPendingFees(String studentId) {
         List<FeeStatus> statuses = List.of(FeeStatus.PENDING, FeeStatus.PARTIAL, FeeStatus.OVERDUE);
@@ -132,6 +155,24 @@ public class FeeService {
         else fee.setStatus(FeeStatus.PARTIAL);
 
         feeRepo.save(fee);
+        notificationService.sendNotification(
+                fee.getStudentId(),
+                "Fee Payment Successful",
+                "You have paid ₹" + req.getAmount() + " for '" + fee.getFeeName() + "'.",
+                "FEE"
+        );
+        List<String> adminUsernames = userRepository.findAdminUsernames();
+
+        for (String adminUsername : adminUsernames) {
+            notificationService.sendNotification(
+                    adminUsername,             // ← must be "admin"
+                    "Fee Payment Received",
+                    "Student " + fee.getStudentId() + " paid ₹" + req.getAmount() +
+                            " for '" + fee.getFeeName() + "'.",
+                    "FEE"
+            );
+        }
+
 
         return payment;
     }
@@ -141,7 +182,6 @@ public class FeeService {
     }
 
     public FeeDashboardResponse getFeeDashboard(String studentId) {
-
         FeeSummaryDTO summary = getSummary(studentId);
         List<StudentFeeDTO> pending = getPendingFees(studentId);
         List<StudentFeeDTO> all = getAllFees(studentId);
@@ -155,9 +195,8 @@ public class FeeService {
                 .build();
     }
 
-
+    // This is for Class Fee (Not Bulk Assign) - Keeping original logic
     public ClassFeeResponse createFeeForClass(ClassFeeRequest req) {
-
         List<Student> students =
                 studentRepository.findByClassSection_ClassSectionId(req.getClassSectionId());
 
@@ -166,7 +205,6 @@ public class FeeService {
         }
 
         for (Student s : students) {
-
             StudentFee fee = StudentFee.builder()
                     .feeId("FEE-" + UUID.randomUUID())
                     .studentId(s.getStudentId())
@@ -189,6 +227,7 @@ public class FeeService {
                 .status("SUCCESS")
                 .build();
     }
+
     public List<ClassFeeStatsDTO> getAllClassesFeeStats() {
         List<ClassSection> allSections = classSectionRepository.findAll();
         return allSections.stream().map(sec -> {
@@ -207,12 +246,10 @@ public class FeeService {
         }).collect(Collectors.toList());
     }
 
-    // 2. Get Students List with Fee Status for a Specific Class
     public List<StudentFeeStatusDTO> getClassStudentFeeStatus(String classSectionId) {
         List<Student> students = studentRepository.findByClassSection_ClassSectionId(classSectionId);
         return students.stream().map(s -> {
             Double totalFee = s.getTotalFee() != null ? s.getTotalFee() : 0.0;
-            // Calculate total paid by this student from feeRepo
             Double paid = feeRepo.findByStudentId(s.getStudentId()).stream()
                     .mapToDouble(f -> f.getAmountPaid() == null ? 0.0 : f.getAmountPaid())
                     .sum();
@@ -229,8 +266,5 @@ public class FeeService {
                     .build();
         }).collect(Collectors.toList());
     }
-
-
-
-
 }
+

@@ -1,5 +1,6 @@
 package com.project.student.education.controller;
 
+import com.project.student.education.DTO.ChangePasswordRequest;
 import com.project.student.education.DTO.LoginRequestDto;
 import com.project.student.education.DTO.SignupRequestDto;
 import com.project.student.education.DTO.TokenPair;
@@ -7,6 +8,8 @@ import com.project.student.education.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -54,4 +57,15 @@ public class AuthController {
                 "refreshToken", newTokens.getRefreshToken()
         ));
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(
+            @RequestBody ChangePasswordRequest request,
+            Authentication authentication
+    ) {
+        String username = authentication.getName();
+        return ResponseEntity.ok(authService.changePassword(username, request));
+    }
+
 }

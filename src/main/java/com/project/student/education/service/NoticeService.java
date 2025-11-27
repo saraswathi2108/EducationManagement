@@ -3,6 +3,8 @@ package com.project.student.education.service;
 import com.project.student.education.entity.IdGenerator;
 import com.project.student.education.entity.Notice;
 import com.project.student.education.repository.NoticeRepository;
+import com.project.student.education.repository.StudentRepository;
+import com.project.student.education.repository.TeacherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,12 +19,26 @@ public class NoticeService {
     @Autowired
     private IdGenerator idGenerator;
 
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private TeacherRepository teacherRepository;
+
+    @Autowired
+    private NotificationService notificationService;
+
     public Notice create(Notice notice) {
 
         if (noticeRepository.existsByNoticeName(notice.getNoticeName())) {
             throw new RuntimeException("Notice already exists with name: " + notice.getNoticeName());
         }
         notice.setId(idGenerator.generateId("NOT"));
+        notifyAllUsers(
+                "New Notice Posted",
+                notice.getNoticeName() + ": " + notice.getNoticeDescription()
+        );
+
         return noticeRepository.save(notice);
     }
 
@@ -45,8 +61,12 @@ public class NoticeService {
         existing.setNoticeDescription(updatedNotice.getNoticeDescription());
         existing.setNoticeType(updatedNotice.getNoticeType());
         existing.setNoticeDate(updatedNotice.getNoticeDate());
-
-        return noticeRepository.save(existing);
+       Notice saved= noticeRepository.save(existing);
+        notifyAllUsers(
+                "Notice Updated",
+                saved.getNoticeName() + " has been updated."
+        );
+        return saved;
     }
 
     public void delete(String id) {
@@ -58,6 +78,20 @@ public class NoticeService {
     }
     public List<Notice> getAll() {
         return noticeRepository.findAll();
+    }
+    private void notifyAllUsers(String title, String message) {
+
+        // Notify all students
+        List<String> studentIds = studentRepository.findAllStudentIds();
+        for (String sid : studentIds) {
+            notificationService.sendNotification(sid, title, message, "NOTICE");
+        }
+
+        // Notify all teachers
+        List<String> teacherUsernames = teacherRepository.findAllTeacherIds();
+        for (String tid : teacherUsernames) {
+            notificationService.sendNotification(tid, title, message, "NOTICE");
+        }
     }
 
 }

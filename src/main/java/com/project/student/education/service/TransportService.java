@@ -79,22 +79,7 @@ public class TransportService {
     }
 
 
-    private StudentTransportDTO mapToDTO(StudentTransport st) {
 
-        return StudentTransportDTO.builder()
-                .studentId(st.getStudentId())
-                .routeName(st.getRoute().getRouteName())
-                .pickupStop(st.getPickupStop())
-                .dropStop(st.getDropStop())
-                .pickupTime(st.getPickupTime())
-                .dropTime(st.getDropTime())
-                .vehicleName(st.getRoute().getVehicleName())
-                .vehicleNumber(st.getRoute().getVehicleNumber())
-                .driverName(st.getRoute().getDriverName())
-                .driverPhone(st.getRoute().getDriverPhone())
-                .feeStatus(st.getFeeStatus())
-                .build();
-    }
 
     public StudentTransportDTO getStudentTransportDetails(String studentId) {
 
@@ -148,5 +133,20 @@ public class TransportService {
     public List<TransportRoute> getAllRoute() {
         return transportRouteRepository.findAll();
     }
+    private StudentTransportDTO mapToDTO(StudentTransport st) {
 
+        return StudentTransportDTO.builder()
+                .studentId(st.getStudentId())
+                .routeName(st.getRoute().getRouteName())
+                .pickupStop(st.getPickupStop())
+                .dropStop(st.getDropStop())
+                .pickupTime(st.getPickupTime())
+                .dropTime(st.getDropTime())
+                .vehicleName(st.getRoute().getVehicleName())
+                .vehicleNumber(st.getRoute().getVehicleNumber())
+                .driverName(st.getRoute().getDriverName())
+                .driverPhone(st.getRoute().getDriverPhone())
+                .feeStatus(st.getFeeStatus())
+                .build();
+    }
 }

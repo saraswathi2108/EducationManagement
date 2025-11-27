@@ -34,6 +34,9 @@ public class ExamService {
     private final ModelMapper modelMapper;
     private final ExamMasterRepository examRepo;
     private final ExamRecordRepository examRecordRepo;
+    private final NotificationService notificationService;
+
+
 
     private final ClassSectionRepository classSectionRepo;
     private final SubjectRepository subjectRepo;
@@ -155,6 +158,18 @@ public class ExamService {
             r.setResultStatus(ExamResultStatus.PUBLISHED);
             r.setPublishedBy(adminName);
             r.setUpdatedAt(LocalDateTime.now());
+        }
+        List<Student> students = classSectionRepo.findById(classSectionId)
+                .get()
+                .getStudents();
+
+        for (Student s : students) {
+            notificationService.sendNotification(
+                    s.getStudentId(),
+                    "Result Published",
+                    "Your result for exam '" + examRepo.findById(examId).get().getExamName() + "' is now available.",
+                    "EXAM"
+            );
         }
 
         examRecordRepo.saveAll(records);

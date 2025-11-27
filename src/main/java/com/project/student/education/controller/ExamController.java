@@ -24,22 +24,29 @@ public class ExamController {
     private final ExamSchedulingService schedulingService;
 
 
+    @PreAuthorize("hasRole('ADMIN')")
 
     @PostMapping("/create")
     public ResponseEntity<ExamMasterDTO>createExam(@RequestBody ExamMasterDTO examMasterDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(examService.createExam(examMasterDTO));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @GetMapping("/all")
     public ResponseEntity<List<ExamMasterDTO>> getAllExams() {
         return ResponseEntity.status(HttpStatus.OK).body(examService.getAllExams());
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
 
     @GetMapping("/{examId}")
     public ResponseEntity<ExamMasterDTO> getExamById(@PathVariable String examId) {
         return  ResponseEntity.ok(examService.getExamById(examId));
 
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+
     @PutMapping("/{examId}/status")
     public ResponseEntity<ExamMasterDTO> updateStatus(
             @PathVariable String examId,
@@ -47,17 +54,24 @@ public class ExamController {
 
         return ResponseEntity.ok(examService.updateExamStatus(examId, request));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+
     @PostMapping("/schedule-one")
     public ResponseEntity<ExamRecordDTO> scheduleExam(
             @RequestBody ExamRecordDTO dto) {
         return ResponseEntity.ok(schedulingService.scheduleOne(dto));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+
     @PostMapping("/schedule-bulk")
     public ResponseEntity<List<ExamRecordDTO>> scheduleBulk(@RequestBody BulkScheduleRequest req) {
         return ResponseEntity.ok(schedulingService.scheduleBulk(req));
     }
 
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{examId}/timetable/{classSectionId}")
     public ResponseEntity<List<TimetableDayDTO>> getTimetable(
             @PathVariable String examId,
@@ -75,12 +89,15 @@ public class ExamController {
 //    public ResponseEntity<Stu>
 //
 //
-    @PostMapping("schedule-comprehensive")
+@PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+
+@PostMapping("schedule-comprehensive")
     public ResponseEntity<List<ExamRecordDTO>> scheduleComprehensive(@RequestBody ComprehensiveScheduleRequest req){
         List<ExamRecordDTO>examRecordDTOS=schedulingService.scheduleComprehensive(req);
         return ResponseEntity.ok(examRecordDTOS);
     }
 
+    @PreAuthorize("hasRole('TEACHER')")
 
     @GetMapping("/teacher/{examId}")
     public ResponseEntity<List<TimetableDayDTO>> getTeacherClassExamTimetable(
@@ -90,6 +107,8 @@ public class ExamController {
                 schedulingService.getTeacherClassExamTimetable(examId)
         );
     }
+
+    @PreAuthorize("hasRole('TEACHER')")
 
     @GetMapping("/teacher/subject/{examId}")
     public ResponseEntity<List<TimetableDayDTO>> getTeacherSubjectExamTimetable(
@@ -101,6 +120,8 @@ public class ExamController {
     }
 
 
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+
     @PutMapping("/enter-marks/{subjectId}")
     public ResponseEntity<String> enterMarks(
             @PathVariable String subjectId,
@@ -109,6 +130,8 @@ public class ExamController {
         examService.enterMarks(subjectId, request);
         return ResponseEntity.ok("Marks saved successfully for subject " + subjectId);
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @GetMapping("/records/{examId}/{classSectionId}/{subjectId}")
     public ResponseEntity<List<StudentExamRecordDTO>> getExamRecords(
             @PathVariable String examId,
@@ -122,6 +145,7 @@ public class ExamController {
 
 
 
+    @PreAuthorize("hasRole('ADMIN')")
 
     @PutMapping("/publish/{examId}/{classSectionId}")
     public ResponseEntity<String> publishResult(
@@ -133,6 +157,7 @@ public class ExamController {
         return ResponseEntity.ok("Result published successfully.");
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT','PARENT')")
     @GetMapping("/result/{examId}/{studentId}")
     public ResponseEntity<StudentExamResultDTO> getResult(
             @PathVariable String examId,
@@ -143,6 +168,9 @@ public class ExamController {
                 examService.getStudentResult(examId, studentId, classSectionId)
         );
     }
+
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+
     @GetMapping("/class-result/{examId}/{classSectionId}")
     public ResponseEntity<List<StudentExamResultDTO>> getClassExamResults(
             @PathVariable String examId,

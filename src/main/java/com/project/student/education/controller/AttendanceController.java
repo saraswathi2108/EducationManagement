@@ -4,6 +4,7 @@ import com.project.student.education.DTO.AttendanceRequest;
 import com.project.student.education.DTO.AttendanceViewDTO;
 import com.project.student.education.service.AttendanceService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,6 +21,7 @@ public class AttendanceController {
         this.attendanceService = attendanceService;
     }
 
+    @PreAuthorize("hasRole('TEACHER')")
     @PostMapping("/mark/{classSectionId}/{teacherId}")
     public ResponseEntity<?> markAttendance(
             @PathVariable String classSectionId,
@@ -36,6 +38,8 @@ public class AttendanceController {
                 "data", result
         ));
     }
+
+    @PreAuthorize("hasRole('STUDENT')")
     @GetMapping("/{studentId}/{year}/{month}")
     public ResponseEntity<AttendanceViewDTO> getAttendanceByStudent(
             @PathVariable String studentId,
@@ -46,6 +50,9 @@ public class AttendanceController {
                 attendanceService.getAttendanceByStudent(studentId, year, month)
         );
     }
+
+    @PreAuthorize("hasRole('ADMIN')") // FIXED!
+
     @GetMapping("/class/{classSectionId}/date/{date}")
     public ResponseEntity<List<Map<String, Object>>> getClassAttendanceForDate(
             @PathVariable String classSectionId,
