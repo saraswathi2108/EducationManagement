@@ -23,9 +23,7 @@ public class NotificationController {
     private final NotificationPushService pushService;
 
 
-    // ---------------------------------------------
-    // 1. CREATE / SEND NOTIFICATION (manual testing)
-    // ---------------------------------------------
+
     @PostMapping("/send")
     public ResponseEntity<String> send(@RequestBody Notification req) {
         notificationService.sendNotification(

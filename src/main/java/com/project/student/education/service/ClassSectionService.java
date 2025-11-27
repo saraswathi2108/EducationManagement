@@ -161,7 +161,6 @@ public class ClassSectionService {
         return mapToDTO(saved);
     }
 
-
     private ClassSectionDTO mapToDTO(ClassSection section) {
         ClassSectionDTO dto = modelMapper.map(section, ClassSectionDTO.class);
 
@@ -169,6 +168,11 @@ public class ClassSectionService {
             dto.setClassTeacherId(section.getClassTeacher().getTeacherId());
             dto.setClassTeacherName(section.getClassTeacher().getTeacherName());
         }
+
+        // ⭐ COUNT students from repository
+        int strength = studentRepository.countByClassSection_ClassSectionId(section.getClassSectionId());
+        dto.setCurrentStrength(strength);
+
         List<ClassSubjectMapping> mappings =
                 classSubjectMappingRepository.findByClassSection_ClassSectionId(section.getClassSectionId());
 
@@ -178,9 +182,9 @@ public class ClassSectionService {
 
         dto.setSubjectIds(subjectIds);
 
-
         return dto;
     }
+
 
     public ClassSectionDTO assignStudentToClassSection(String classSectionId, String studentId) {
 

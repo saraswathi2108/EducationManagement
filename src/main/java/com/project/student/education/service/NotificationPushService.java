@@ -72,7 +72,6 @@ public class NotificationPushService {
             }
         });
 
-        // Remove dead emitters
         userEmitters.removeAll(deadEmitters);
     }
 

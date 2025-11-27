@@ -33,4 +33,6 @@ public interface StudentRepository extends JpaRepository<Student, String> {
 
     @Query("SELECT SUM(s.totalFee) FROM Student s WHERE s.classSection.classSectionId = :classSectionId")
     Double getTotalFeeByClass(@Param("classSectionId") String classSectionId);
+
+    int countByClassSection_ClassSectionId(String classSectionId);
 }
