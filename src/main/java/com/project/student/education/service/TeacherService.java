@@ -8,6 +8,8 @@ import com.project.student.education.enums.Role;
 import com.project.student.education.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,8 +31,8 @@ public class TeacherService {
     private final ClassSectionRepository classSectionRepository;
     private final TimetableRepository timetableRepository;
     private final SubjectRepository subjectRepository;
+    private final JavaMailSender mailSender;
 
-    // ✅ Added Repository for fetching subject mappings
     private final ClassSubjectMappingRepository classSubjectMappingRepository;
 
     public TeacherDTO addTeacher(TeacherDTO dto) {
@@ -45,6 +47,7 @@ public class TeacherService {
                 .username(teacherId)
                 .password(passwordEncoder.encode(rawPassword))
                 .role(Role.ROLE_TEACHER)
+                .email(dto.getEmail())
                 .build();
 
         userRepository.save(user);
@@ -70,6 +73,9 @@ public class TeacherService {
         TeacherDTO response = modelMapper.map(teacher, TeacherDTO.class);
         response.setPassword(rawPassword);
         response.setSubjectIds(teacher.getSubjectIds());
+        if (dto.getEmail() != null && !dto.getEmail().isEmpty()) {
+            sendTeacherWelcomeEmail(dto.getEmail(), teacherId, rawPassword);
+        }
 
         return response;
     }
@@ -169,7 +175,6 @@ public class TeacherService {
                 .map(ClassSubjectMapping::getClassSection)
                 .toList();
 
-        // 3. Merge both lists and remove duplicates using a Set
         Set<ClassSection> uniqueClasses = new HashSet<>(asClassTeacher);
         uniqueClasses.addAll(asSubjectTeacher);
 
@@ -310,4 +315,23 @@ public class TeacherService {
                 .weeklyTimetable(weekly)
                 .build();
     }
+
+    private void sendTeacherWelcomeEmail(String email, String teacherId, String rawPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Teacher Account Created - Login Credentials");
+        message.setText(
+                "Dear Teacher,\n\n"
+                        + "Your teacher account has been created successfully.\n\n"
+                        + "Here are your login credentials:\n"
+                        + "Teacher ID: " + teacherId + "\n"
+                        + "Password: " + rawPassword + "\n\n"
+                        + "Please log in and change your password immediately.\n\n"
+                        + "Regards,\n"
+                        + "School Administration"
+        );
+
+        mailSender.send(message);
+    }
+
 }

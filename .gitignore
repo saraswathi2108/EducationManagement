@@ -20,6 +20,7 @@ target/
 *.ipr
 # Ignore Windows shortcuts
 *.lnk
+.env
 
 
 ### NetBeans ###

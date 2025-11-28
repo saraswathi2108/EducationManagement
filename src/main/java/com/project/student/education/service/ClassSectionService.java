@@ -25,7 +25,6 @@ public class ClassSectionService {
 
     public ClassSectionDTO createClassSection(ClassSectionDTO dto) {
 
-        // Duplicate check
         classSectionRepository.findByClassNameAndSectionAndAcademicYear(
                         dto.getClassName(), dto.getSection(), dto.getAcademicYear()
                 )
@@ -33,10 +32,8 @@ public class ClassSectionService {
                     throw new RuntimeException("Class section already exists for this academic year!");
                 });
 
-        // Generate class section ID
         String id = idGenerator.generateId("CLS");
 
-        // Fetch class teacher
         Teacher classTeacher = null;
 
         if (dto.getClassTeacherId() != null) {
@@ -45,7 +42,6 @@ public class ClassSectionService {
                             new RuntimeException("Teacher not found with ID: " + dto.getClassTeacherId()));
         }
 
-// Create Class Section
         ClassSection classSection = ClassSection.builder()
                 .classSectionId(id)
                 .className(dto.getClassName())
@@ -169,7 +165,6 @@ public class ClassSectionService {
             dto.setClassTeacherName(section.getClassTeacher().getTeacherName());
         }
 
-        // ⭐ COUNT students from repository
         int strength = studentRepository.countByClassSection_ClassSectionId(section.getClassSectionId());
         dto.setCurrentStrength(strength);
 

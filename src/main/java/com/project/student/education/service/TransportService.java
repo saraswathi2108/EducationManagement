@@ -25,6 +25,7 @@ public class TransportService {
     private final TransportRouteRepository transportRouteRepository;
 
     private final StudentTransportRepository studentTransportRepository;
+    private final NotificationService notificationService;
 
     public TransportRoute createRoute(TransportRoute route) {
         if (transportRouteRepository.existsByRouteName(route.getRouteName())) {
@@ -74,6 +75,13 @@ public class TransportService {
         st.setFeeStatus(req.getFeeStatus());
 
         studentTransportRepository.save(st);
+        notificationService.sendNotification(
+                studentId,
+                "transport assigned",
+                "Message",
+
+                "transport"
+        );
 
         return mapToDTO(st);
     }

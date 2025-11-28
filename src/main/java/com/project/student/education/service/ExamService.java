@@ -102,7 +102,6 @@ public class ExamService {
                             "Record not found for student: " + entry.getStudentId()
                     ));
 
-            // Auto Detect Present / Absent
             boolean hasMarks =
                     (entry.getPaperObtained() != null && entry.getPaperObtained() > 0) ||
                             (entry.getAssignmentObtained() != null && entry.getAssignmentObtained() > 0);

@@ -1,9 +1,6 @@
 package com.project.student.education.controller;
 
-import com.project.student.education.DTO.ChangePasswordRequest;
-import com.project.student.education.DTO.LoginRequestDto;
-import com.project.student.education.DTO.SignupRequestDto;
-import com.project.student.education.DTO.TokenPair;
+import com.project.student.education.DTO.*;
 import com.project.student.education.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/student/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -66,6 +63,20 @@ public class AuthController {
     ) {
         String username = authentication.getName();
         return ResponseEntity.ok(authService.changePassword(username, request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+        return ResponseEntity.ok(Map.of(
+                "message", authService.sendOtp(req)
+        ));
+
+    }
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordWithOtpRequest req) {
+        return ResponseEntity.ok(Map.of(
+                "message", authService.resetPassword(req)
+        ));
     }
 
 }

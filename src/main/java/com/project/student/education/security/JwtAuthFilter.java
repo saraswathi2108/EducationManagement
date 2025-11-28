@@ -62,13 +62,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         chain.doFilter(req, res);
     }
-
     private boolean isPublicEndpoint(String path) {
-        return path.equals("/api/auth/login")
-                || path.equals("/api/auth/signup")
-                || path.equals("/api/auth/refresh-token")
+        return path.equals("/api/student/auth/login")
+                || path.equals("/api/student/auth/signup")
+                || path.equals("/api/student/auth/refresh-token")
+                || path.equals("/api/student/auth/forgot-password")
+                || path.equals("/api/student/auth/reset-password")
+                || path.startsWith("/api/student/notifications/")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
-                || path.startsWith("/actuator");
+                || path.startsWith("/actuator")
+                || path.startsWith("/images/");
     }
+
 }

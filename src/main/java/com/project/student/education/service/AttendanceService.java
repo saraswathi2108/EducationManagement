@@ -94,11 +94,9 @@ public class AttendanceService {
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
-        // Fetch attendance for month
         List<StudentAttendance> attendanceList =
                 attendanceRepository.findByStudentIdAndDateBetween(studentId, start, end);
 
-        // Map date → status
         Map<LocalDate, String> attendanceMap = attendanceList.stream()
                 .collect(Collectors.toMap(
                         StudentAttendance::getDate,

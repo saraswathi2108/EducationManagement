@@ -85,5 +85,6 @@ public class Admission {
 
     private String rejectionReason;
     private Double totalFee;
+    private String email;
 
 }

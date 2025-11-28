@@ -68,7 +68,6 @@ public class StudentService {
         Student existing = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
 
-        // Update text fields
         existing.setFullName(dto.getFullName());
         existing.setDateOfBirth(dto.getDateOfBirth());
         existing.setGender(dto.getGender());
@@ -441,7 +440,6 @@ public class StudentService {
                 );
             }
 
-            // 4️⃣ Save new timetable period
             Timetable t = Timetable.builder()
                     .id(idGenerator.generateId("T"))
                     .classSection(classSection)

@@ -12,16 +12,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class NotificationPushService {
 
-    // receiverId -> list of connected SSE emitters
     private final Map<String, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
 
-    /**
-     * Subscribe user for real-time notifications via SSE
-     */
+
     public SseEmitter subscribe(String receiverId) {
 
-        // 0L = infinite timeout (connection stays open)
         SseEmitter emitter = new SseEmitter(0L);
 
         emitters.computeIfAbsent(receiverId, k ->
@@ -30,12 +26,10 @@ public class NotificationPushService {
 
         log.info("SSE connected for user {}", receiverId);
 
-        // Remove emitter on timeout / completion / network error
         emitter.onCompletion(() -> removeEmitter(receiverId, emitter));
         emitter.onTimeout(() -> removeEmitter(receiverId, emitter));
         emitter.onError((err) -> removeEmitter(receiverId, emitter));
 
-        // Send initial connected message (optional)
         try {
             emitter.send(SseEmitter.event()
                     .name("INIT")
@@ -48,9 +42,7 @@ public class NotificationPushService {
     }
 
 
-    /**
-     * Send real-time notification to a specific user
-     */
+
     public void sendToUser(String receiverId, Object data) {
 
         List<SseEmitter> userEmitters = emitters.get(receiverId);
@@ -76,9 +68,7 @@ public class NotificationPushService {
     }
 
 
-    /**
-     * Remove dead/closed SSE emitter
-     */
+
     private void removeEmitter(String receiverId, SseEmitter emitter) {
         List<SseEmitter> userEmitters = emitters.get(receiverId);
         if (userEmitters != null) {
@@ -91,17 +81,13 @@ public class NotificationPushService {
     }
 
 
-    /**
-     * Check if user is currently online
-     */
+
     public boolean isOnline(String receiverId) {
         return emitters.containsKey(receiverId) && !emitters.get(receiverId).isEmpty();
     }
 
 
-    /**
-     * Allow user to manually disconnect
-     */
+
     public String unSubscribe(String receiverId) {
         List<SseEmitter> list = emitters.remove(receiverId);
         if (list != null) list.forEach(SseEmitter::complete);

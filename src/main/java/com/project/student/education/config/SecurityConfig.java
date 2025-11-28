@@ -94,22 +94,24 @@ public class SecurityConfig {
 
                         // ---------- Public Endpoints ----------
                         .requestMatchers(
-                                "/api/auth/login",
-                                "/api/auth/signup",
-                                "/api/auth/refresh-token",
+                                "/api/student/auth/login",
+                                "/api/student/auth/signup",
+                                "/api/student/auth/refresh-token",
+                                "/api/student/auth/forgot-password",
+                                "/api/student/auth/reset-password",
                                 "/api/student/admission",
                                 "/api/student/admissions",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/**",
 
-                                "/api/notifications/**"
+                                "/api/student/notifications/**"
                         ).permitAll()
                         .requestMatchers("/images/**").permitAll()
 
 
                         // ---------- Protected ----------
-                        .requestMatchers("/api/auth/change-password").authenticated()
+                        .requestMatchers("/api/student/auth/change-password").authenticated()
 
                         // ---------- Everything else requires login ----------
                         .anyRequest().authenticated()

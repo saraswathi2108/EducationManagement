@@ -15,7 +15,8 @@ import com.project.student.education.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +32,6 @@ import java.util.List;
 public class AdmissionService {
 
 
-//    @Value("${project.image}")
-//    private String imagePath;
 
     private final AdmissionRepository admissionRepository;
     private final IdGenerator idGenerator;
@@ -41,6 +40,7 @@ public class AdmissionService {
     private final ClassSectionRepository classSectionRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JavaMailSender mailSender;
 
     private  final FileService fileService;
 
@@ -102,7 +102,7 @@ public class AdmissionService {
                 .academicYear(year)
                 .joiningDate(LocalDate.now())
                 .contactNumber(admission.getFatherContact())
-                .email(null)
+                .email(admission.getEmail())
                 .address(admission.getAddress())
                 .city(admission.getCity())
                 .state(admission.getState())
@@ -117,6 +117,7 @@ public class AdmissionService {
                 .emergencyContactNumber(admission.getEmergencyContactNumber())
                 .profileImageUrl(admission.getPhotoUrl())
                 .totalFee(admission.getTotalFee())
+                .email(admission.getEmail())
                 .active(true)
                 .build();
 
@@ -126,6 +127,7 @@ public class AdmissionService {
                 .username(studentId)
                 .password(passwordEncoder.encode(rawPassword))
                 .role(Role.ROLE_STUDENT)
+                .email(admission.getEmail())
                 .build();
 
         userRepository.save(user);
@@ -139,6 +141,9 @@ public class AdmissionService {
 
         StudentDTO dto = mapToStudentDTO(student, admissionNumber);
         dto.setGeneratedPassword(rawPassword);
+        if (admission.getEmail() != null && !admission.getEmail().isEmpty()) {
+            sendStudentWelcomeEmail(admission.getEmail(), studentId, rawPassword);
+        }
 
         return dto;
     }
@@ -179,6 +184,7 @@ public class AdmissionService {
                 .emergencyContactNumber(student.getEmergencyContactNumber())
                 .profileImageUrl(student.getProfileImageUrl())
                 .totalFee(student.getTotalFee())
+                .email(student.getEmail())
                 .active(student.getActive())
                 .build();
 
@@ -228,4 +234,22 @@ public class AdmissionService {
                 .map(a -> modelMapper.map(a, AdmissionDTO.class))
                 .toList();
     }
+    private void sendStudentWelcomeEmail(String email, String studentId, String rawPassword) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Welcome to School - Login Credentials");
+        message.setText(
+                "Dear Student,\n\n"
+                        + "Your admission has been approved successfully.\n\n"
+                        + "Here are your login credentials:\n"
+                        + "Student ID: " + studentId + "\n"
+                        + "Password: " + rawPassword + "\n\n"
+                        + "Please login and change your password immediately.\n\n"
+                        + "Regards,\n"
+                        + "School Administration"
+        );
+
+        mailSender.send(message);
+    }
+
 }

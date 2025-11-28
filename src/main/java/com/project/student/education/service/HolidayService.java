@@ -34,7 +34,6 @@ public class HolidayService {
         }
 
         Holiday saved= holidayRepository.save(holiday);
-        // 🔔 Send notification to all students
         studentRepository.findAll().forEach(student -> {
             notificationService.sendNotification(
                     student.getStudentId(),

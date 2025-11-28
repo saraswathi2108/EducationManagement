@@ -71,4 +71,5 @@ public class AdmissionDTO {
 
     private AdmissionStatus status;
     private String rejectionReason;
+    private String email;
 }

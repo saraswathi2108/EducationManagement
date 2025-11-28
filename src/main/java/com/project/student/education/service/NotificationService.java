@@ -18,34 +18,28 @@ public class NotificationService {
     private final NotificationRepository repo;
     private final NotificationPushService pushService;
 
-    /**
-     * Create and send a notification to one user
-     */
+
     public Notification sendNotification(String receiverId, String title, String message, String type) {
 
         Notification notification = Notification.builder()
                 .receiverId(receiverId)
                 .title(title)
                 .message(message)
-                .type(type)               // FEE, NOTICE, EXAM, GENERAL
+                .type(type)
                 .readFlag(false)
                 .deleted(false)
                 .starred(false)
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        // Save in database
         Notification saved = repo.save(notification);
 
-        // Real-time push if user online
         pushService.sendToUser(receiverId, saved);
 
         return saved;
     }
 
-    /**
-     * Get unread notifications for user
-     */
+
     public List<Notification> getUnread(String receiverId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Notification> notifications =
@@ -55,9 +49,7 @@ public class NotificationService {
         return notifications.getContent();
     }
 
-    /**
-     * Get all (non-deleted) notifications
-     */
+
     public List<Notification> getAll(String receiverId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Notification> notifications =
@@ -67,9 +59,7 @@ public class NotificationService {
         return notifications.getContent();
     }
 
-    /**
-     * Mark notification as read
-     */
+
     public void markAsRead(Long id) {
         repo.findById(id).ifPresent(n -> {
             n.setReadFlag(true);
@@ -77,9 +67,7 @@ public class NotificationService {
         });
     }
 
-    /**
-     * Soft delete notification
-     */
+
     public void delete(Long id) {
         repo.findById(id).ifPresent(n -> {
             n.setDeleted(true);
@@ -87,9 +75,7 @@ public class NotificationService {
         });
     }
 
-    /**
-     * Star / Unstar
-     */
+
     public void star(Long id) {
         repo.findById(id).ifPresent(n -> {
             n.setStarred(true);
@@ -104,16 +90,12 @@ public class NotificationService {
         });
     }
 
-    /**
-     * Get unread count for bell icon
-     */
+
     public Long getUnreadCount(String receiverId) {
         return repo.countByReceiverIdAndReadFlagFalseAndDeletedFalse(receiverId);
     }
 
-    /**
-     * Optional: get deleted notifications for recycle bin
-     */
+
     public List<Notification> getDeleted() {
         return repo.findByDeletedTrue();
     }

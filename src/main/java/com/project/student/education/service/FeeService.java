@@ -71,7 +71,6 @@ public class FeeService {
         studentRepository.save(student);
     }
 
-    // Helper to build Fee Object
     private StudentFee buildFee(CreateFeeRequest req) {
         return StudentFee.builder()
                 .feeId(idGenerator.generateId("FEE"))
@@ -108,13 +107,11 @@ public class FeeService {
     }
 
     public FeeSummaryDTO getSummary(String studentId) {
-        // Get student always from Student table to reflect updated Total Fee
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found"));
 
         double totalFee = student.getTotalFee() != null ? student.getTotalFee() : 0.0;
 
-        // Calculate paid amount
         double paid = feeRepo.findByStudentId(studentId).stream()
                 .mapToDouble(f -> f.getAmountPaid() == null ? 0.0 : f.getAmountPaid())
                 .sum();
@@ -165,7 +162,7 @@ public class FeeService {
 
         for (String adminUsername : adminUsernames) {
             notificationService.sendNotification(
-                    adminUsername,             // ← must be "admin"
+                    adminUsername,
                     "Fee Payment Received",
                     "Student " + fee.getStudentId() + " paid ₹" + req.getAmount() +
                             " for '" + fee.getFeeName() + "'.",
@@ -195,7 +192,6 @@ public class FeeService {
                 .build();
     }
 
-    // This is for Class Fee (Not Bulk Assign) - Keeping original logic
     public ClassFeeResponse createFeeForClass(ClassFeeRequest req) {
         List<Student> students =
                 studentRepository.findByClassSection_ClassSectionId(req.getClassSectionId());

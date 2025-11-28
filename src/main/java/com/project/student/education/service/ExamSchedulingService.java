@@ -30,12 +30,9 @@ public class ExamSchedulingService {
     private final ClassSubjectMappingRepository classSubjectRepo;
     private final TeacherRepository teacherRepo;
 
-    // 🔔 NEW: Inject NotificationService
     private final NotificationService notificationService;
 
-    // ---------------------------------------------------------------------
-    // 1. Schedule exam for ONE student + subject
-    // ---------------------------------------------------------------------
+
     @Transactional
     public ExamRecordDTO scheduleOne(ExamRecordDTO dto) {
 
@@ -52,7 +49,6 @@ public class ExamSchedulingService {
 
         ExamRecord saved = recordRepo.save(record);
 
-        // 🔔 Send notification to that student
         String message = "Your exam for subject " + dto.getSubjectId() +
                 " is scheduled on " + dto.getExamDate() +
                 " from " + dto.getStartTime() + " to " + dto.getEndTime() + ".";
@@ -66,9 +62,7 @@ public class ExamSchedulingService {
         return mapper.map(saved, ExamRecordDTO.class);
     }
 
-    // ---------------------------------------------------------------------
-    // 2. Bulk scheduling (one subject, multiple classes)
-    // ---------------------------------------------------------------------
+
     @Transactional
     public List<ExamRecordDTO> scheduleBulk(BulkScheduleRequest req) {
 
@@ -122,7 +116,6 @@ public class ExamSchedulingService {
                 ExamRecord saved = recordRepo.save(record);
                 output.add(mapper.map(saved, ExamRecordDTO.class));
 
-                // 🔔 Notify each student
                 String message = "New exam scheduled for subject " + req.getSubjectId() +
                         " on " + req.getExamDate() +
                         " from " + req.getStartTime() + " to " + req.getEndTime() + ".";
@@ -142,9 +135,7 @@ public class ExamSchedulingService {
         return output;
     }
 
-    // ---------------------------------------------------------------------
-    // 3. Timetable for a specific class + exam
-    // ---------------------------------------------------------------------
+
     @Transactional(readOnly = true)
     public List<TimetableDayDTO> getTimetable(String examId, String classSectionId) {
 
@@ -188,9 +179,7 @@ public class ExamSchedulingService {
         return new ArrayList<>(grouped.values());
     }
 
-    // ---------------------------------------------------------------------
-    // 4. Comprehensive scheduling (many subjects, many classes)
-    // ---------------------------------------------------------------------
+
     @Transactional
     public List<ExamRecordDTO> scheduleComprehensive(ComprehensiveScheduleRequest req) {
 
@@ -224,7 +213,6 @@ public class ExamSchedulingService {
                     throw new EntityNotFoundException("Subject not found: " + entry.getSubjectId());
                 }
 
-                // 🔒 BLOCK ANY SUBJECT AT SAME DATE + TIME
                 boolean timeClashExists = recordRepo
                         .existsByExamIdAndClassSectionIdAndExamDateAndStartTimeAndEndTime(
                                 req.getExamId(),
@@ -271,7 +259,6 @@ public class ExamSchedulingService {
                     ExamRecord saved = recordRepo.save(record);
                     output.add(mapper.map(saved, ExamRecordDTO.class));
 
-                    // 🔔 Notify student of this subject's schedule
                     String message = "New exam scheduled for subject " + entry.getSubjectId() +
                             " on " + entry.getExamDate() +
                             " from " + entry.getStartTime() + " to " + entry.getEndTime() + ".";
@@ -292,9 +279,7 @@ public class ExamSchedulingService {
         return output;
     }
 
-    // ---------------------------------------------------------------------
-    // 5. Timetable for class teacher (his/her class)
-    // ---------------------------------------------------------------------
+
     public List<TimetableDayDTO> getTeacherClassExamTimetable(String examId) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -328,9 +313,7 @@ public class ExamSchedulingService {
         return days;
     }
 
-    // ---------------------------------------------------------------------
-    // 6. Timetable for teacher based on subjects he/she teaches
-    // ---------------------------------------------------------------------
+
     public List<TimetableDayDTO> getTeacherSubjectExamTimetable(String examId) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -391,9 +374,7 @@ public class ExamSchedulingService {
         return new ArrayList<>(map.values());
     }
 
-    // ---------------------------------------------------------------------
-    // Helper methods
-    // ---------------------------------------------------------------------
+
     private void validateScheduleInput(ExamRecordDTO dto) {
         if (!examRepo.existsById(dto.getExamId()))
             throw new EntityNotFoundException("Exam not found");

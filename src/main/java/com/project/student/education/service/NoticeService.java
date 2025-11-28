@@ -51,7 +51,6 @@ public class NoticeService {
         Notice existing = noticeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notice not found with id: " + id));
 
-        // ✅ duplicate check excluding current record
         if (noticeRepository.existsByNoticeName(updatedNotice.getNoticeName())
                 && !existing.getNoticeName().equals(updatedNotice.getNoticeName())) {
             throw new RuntimeException("Another notice already exists with name: " + updatedNotice.getNoticeName());
@@ -81,13 +80,11 @@ public class NoticeService {
     }
     private void notifyAllUsers(String title, String message) {
 
-        // Notify all students
         List<String> studentIds = studentRepository.findAllStudentIds();
         for (String sid : studentIds) {
             notificationService.sendNotification(sid, title, message, "NOTICE");
         }
 
-        // Notify all teachers
         List<String> teacherUsernames = teacherRepository.findAllTeacherIds();
         for (String tid : teacherUsernames) {
             notificationService.sendNotification(tid, title, message, "NOTICE");
