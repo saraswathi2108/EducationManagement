@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +17,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.*;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true)
@@ -26,7 +28,6 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtFilter;
     private final UserDetailsService userDetailsService;
-
 
     // ---------------- PASSWORD ENCODER ----------------
     @Bean
@@ -49,6 +50,32 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    // ---------------- UNIVERSAL CORS (WEB + MOBILE) ----------------
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration config = new CorsConfiguration();
+
+        // 🔥 Allow ALL domains (Web + Mobile + IP + Android emulator + iOS)
+        config.setAllowedOriginPatterns(Arrays.asList("*"));
+
+        // 🔥 Required for file upload, POST, PUT, PATCH
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+
+        // 🔥 Allow headers for JWT + Multipart
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
+
+        // 🔥 Allow cookies / auth tokens for mobile apps
+        config.setAllowCredentials(true);
+
+        // 🔥 Expose tokens to frontend
+        config.setExposedHeaders(Arrays.asList("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        return source;
+    }
 
     // ---------------- SECURITY FILTER CHAIN ----------------
     @Bean
@@ -56,7 +83,10 @@ public class SecurityConfig {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .cors(Customizer.withDefaults())
+
+                // 🔥 THIS IS THE IMPORTANT LINE FOR WEB + MOBILE CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny()))
 
@@ -72,13 +102,16 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/**",
+
                                 "/api/notifications/**"
                         ).permitAll()
+                        .requestMatchers("/images/**").permitAll()
 
-                        // ---------- Change password (authenticated only) ----------
+
+                        // ---------- Protected ----------
                         .requestMatchers("/api/auth/change-password").authenticated()
 
-                        // ---------- All other APIs require JWT login ----------
+                        // ---------- Everything else requires login ----------
                         .anyRequest().authenticated()
                 )
 

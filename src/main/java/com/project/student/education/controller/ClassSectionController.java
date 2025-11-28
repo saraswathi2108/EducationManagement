@@ -22,13 +22,13 @@ public class ClassSectionController {
         return ResponseEntity.ok(classSectionService.createClassSection(dto));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
     @GetMapping("/class-sections")
     public ResponseEntity<List<ClassSectionDTO>> getAllClassSections() {
         return ResponseEntity.ok(classSectionService.getAllClassSections());
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
 
     @GetMapping("/class-sections/search")
     public ResponseEntity<ClassSectionDTO> getClassSection(
@@ -40,8 +40,7 @@ public class ClassSectionController {
         );
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
-
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
     @GetMapping("/class/{classSectionId}/students")
     public ResponseEntity<List<StudentDTO>> getStudentsByClassSection(@PathVariable String classSectionId) {
         List<StudentDTO> students =classSectionService.getStudentsByClassSection(classSectionId);
@@ -92,7 +91,7 @@ public class ClassSectionController {
         return ResponseEntity.ok(classSectionDTO);
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
 
     @GetMapping("/students/unassigned/{grade}")
     public ResponseEntity<List<StudentDTO>> getUnassignedStudents(@PathVariable String grade) {

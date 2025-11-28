@@ -78,7 +78,7 @@ public class TimeTableController {
 
     // ADMIN + TEACHER
     // A class teacher can see only their class timetable → validate in service layer
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
     @GetMapping("/teacher/{teacherId}/class-timetable")
     public ResponseEntity<TeacherWeeklyTimetableDTO> getClassTeacherTimetable(
             @PathVariable String teacherId,

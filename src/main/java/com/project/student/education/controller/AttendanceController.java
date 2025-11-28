@@ -51,7 +51,7 @@ public class AttendanceController {
         );
     }
 
-    @PreAuthorize("hasRole('ADMIN')") // FIXED!
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER','STUDENT')")
 
     @GetMapping("/class/{classSectionId}/date/{date}")
     public ResponseEntity<List<Map<String, Object>>> getClassAttendanceForDate(

@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -29,38 +28,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String path = req.getRequestURI();
 
+        // 🌟 Public endpoints - no authentication required
         if (isPublicEndpoint(path)) {
             chain.doFilter(req, res);
             return;
         }
 
         String header = req.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) {
-            chain.doFilter(req, res);
-            return;
-        }
 
-        String token = header.substring(7);
+        // 🌟 If header contains Bearer token → authenticate
+        if (header != null && header.startsWith("Bearer ")) {
 
-        if (jwtService.validateToken(token)) {
-            String username = jwtService.extractUsername(token);
-            UserDetails user = userDetailsService.loadUserByUsername(username);
+            String token = header.substring(7);
 
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            user,
-                            null,
-                            user.getAuthorities()
-                    );
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+            if (jwtService.validateToken(token)) {
+                String username = jwtService.extractUsername(token);
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+                UserDetails user = userDetailsService.loadUserByUsername(username);
+
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                user,
+                                null,
+                                user.getAuthorities()
+                        );
+
+                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+
+                // 🌟 Register user as authenticated
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
         }
 
         chain.doFilter(req, res);
     }
 
-    // Helper method to skip login, signup, refresh
     private boolean isPublicEndpoint(String path) {
         return path.equals("/api/auth/login")
                 || path.equals("/api/auth/signup")
@@ -69,5 +71,4 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 || path.startsWith("/v3/api-docs")
                 || path.startsWith("/actuator");
     }
-
 }
