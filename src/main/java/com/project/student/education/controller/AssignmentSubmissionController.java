@@ -19,7 +19,7 @@ public class AssignmentSubmissionController {
     private final AssignmentSubmissionService submissionService;
 
 
-    @PreAuthorize("hasAnyRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @PostMapping(
             value = "/{assignmentId}/{subjectId}",
             consumes = { MediaType.MULTIPART_FORM_DATA_VALUE }
@@ -39,7 +39,7 @@ public class AssignmentSubmissionController {
 
 
 
-    @PreAuthorize("hasAnyRole('STUDENT')")
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER')")
     @PutMapping("/{assignmentId}/{subjectId}/{submissionNumber}")
     public ResponseEntity<String> reviewSubmission(
             @PathVariable String assignmentId,

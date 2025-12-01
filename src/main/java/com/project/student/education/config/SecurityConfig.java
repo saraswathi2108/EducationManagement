@@ -4,6 +4,7 @@ import com.project.student.education.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -17,7 +18,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.*;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
@@ -29,13 +32,11 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtFilter;
     private final UserDetailsService userDetailsService;
 
-    // ---------------- PASSWORD ENCODER ----------------
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ---------------- AUTH PROVIDER ----------------
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -44,55 +45,37 @@ public class SecurityConfig {
         return provider;
     }
 
-    // ---------------- AUTH MANAGER ----------------
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
-    // ---------------- UNIVERSAL CORS (WEB + MOBILE) ----------------
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-
         CorsConfiguration config = new CorsConfiguration();
-
-        // 🔥 Allow ALL domains (Web + Mobile + IP + Android emulator + iOS)
         config.setAllowedOriginPatterns(Arrays.asList("*"));
-
-        // 🔥 Required for file upload, POST, PUT, PATCH
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // 🔥 Allow headers for JWT + Multipart
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-
-        // 🔥 Allow cookies / auth tokens for mobile apps
         config.setAllowCredentials(true);
-
-        // 🔥 Expose tokens to frontend
         config.setExposedHeaders(Arrays.asList("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
 
-    // ---------------- SECURITY FILTER CHAIN ----------------
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 🔥 THIS IS THE IMPORTANT LINE FOR WEB + MOBILE CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(h -> h.frameOptions(f -> f.deny()))
-
                 .authorizeHttpRequests(auth -> auth
 
-                        // ---------- Public Endpoints ----------
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers(
                                 "/api/student/auth/login",
                                 "/api/student/auth/signup",
@@ -104,19 +87,27 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/**",
-
                                 "/api/student/notifications/**"
                         ).permitAll()
+
                         .requestMatchers("/images/**").permitAll()
 
+                        .requestMatchers(
+                                "/ai/**",
+                                "/apisyniq/**",
+                                "/api-syniq/**",
+                                "/syniq/**",
+                                "/index.html",
+                                "/*",
+                                "/static/**",
+                                "/public/**",
+                                "/webjars/**",
+                                "/RepresentUI.html"
+                        ).permitAll()
 
-                        // ---------- Protected ----------
                         .requestMatchers("/api/student/auth/change-password").authenticated()
-
-                        // ---------- Everything else requires login ----------
                         .anyRequest().authenticated()
                 )
-
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

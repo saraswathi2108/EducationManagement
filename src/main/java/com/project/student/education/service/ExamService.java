@@ -37,7 +37,6 @@ public class ExamService {
     private final NotificationService notificationService;
 
 
-
     private final ClassSectionRepository classSectionRepo;
     private final SubjectRepository subjectRepo;
 
@@ -130,9 +129,6 @@ public class ExamService {
     }
 
 
-
-
-
     @Transactional
     public void publishResult(String examId, String classSectionId, String adminName) {
 
@@ -143,36 +139,51 @@ public class ExamService {
             throw new RuntimeException("No records found for publishing");
 
 
-        boolean invalid = records.stream().anyMatch(r ->
-                r.getAttendanceStatus() == null ||
-                        (r.getAttendanceStatus() == ExamAttendanceStatus.PRESENT &&
-                                r.getPaperObtained() == null)
-        );
-
-        if (invalid)
-            throw new RuntimeException("Marks or attendance missing! Cannot publish.");
-
-
         for (ExamRecord r : records) {
+
+            // 1️⃣ If attendance missing → ABSENT
+            if (r.getAttendanceStatus() == null) {
+                r.setAttendanceStatus(ExamAttendanceStatus.ABSENT);
+                r.setPaperObtained(0.0);
+                r.setAssignmentObtained(0.0);
+            }
+
+            // 2️⃣ If PRESENT but marks not entered → consider ABSENT
+            if (r.getAttendanceStatus() == ExamAttendanceStatus.PRESENT &&
+                    (r.getPaperObtained() == null || r.getAssignmentObtained() == null)) {
+
+                r.setAttendanceStatus(ExamAttendanceStatus.ABSENT);
+                r.setPaperObtained(0.0);
+                r.setAssignmentObtained(0.0);
+            }
+
+            // 3️⃣ Now publish the result
             r.setResultStatus(ExamResultStatus.PUBLISHED);
             r.setPublishedBy(adminName);
             r.setUpdatedAt(LocalDateTime.now());
         }
+
+        // 4️⃣ Send notifications to all students of class
         List<Student> students = classSectionRepo.findById(classSectionId)
-                .get()
+                .orElseThrow(() -> new RuntimeException("Class section not found"))
                 .getStudents();
+
+        String examName = examRepo.findById(examId)
+                .orElseThrow(() -> new RuntimeException("Exam not found"))
+                .getExamName();
 
         for (Student s : students) {
             notificationService.sendNotification(
                     s.getStudentId(),
                     "Result Published",
-                    "Your result for exam '" + examRepo.findById(examId).get().getExamName() + "' is now available.",
+                    "Your result for exam '" + examName + "' is now available.",
                     "EXAM"
             );
         }
 
         examRecordRepo.saveAll(records);
     }
+
     public StudentExamResultDTO getStudentResult(String examId, String studentId, String classSectionId) {
 
         List<ExamRecord> records =
@@ -192,13 +203,15 @@ public class ExamService {
 
         List<SubjectResultDTO> subjects = new ArrayList<>();
 
+        boolean hasZeroSubject = false;  // ⭐ For rank check
+
         for (ExamRecord r : records) {
 
-            double paper = r.getPaperObtained();
-            double paperMax = r.getPaperTotal();
+            double paper = r.getPaperObtained() != null ? r.getPaperObtained() : 0;
+            double paperMax = r.getPaperTotal() != null ? r.getPaperTotal() : 0;
 
-            double assign = r.getAssignmentObtained();
-            double assignMax = r.getAssignmentTotal();
+            double assign = r.getAssignmentObtained() != null ? r.getAssignmentObtained() : 0;
+            double assignMax = r.getAssignmentTotal() != null ? r.getAssignmentTotal() : 0;
 
             double finalTotal = paper + assign;
             double finalMax = paperMax + assignMax;
@@ -206,14 +219,17 @@ public class ExamService {
             totalObt += finalTotal;
             totalMax += finalMax;
 
-            // ⭐ SAFE PASS MARKS CHECK
-            Double passMarks = r.getPassMarks();
-            String status;
+            if (finalTotal == 0)
+                hasZeroSubject = true;  // ❌ No rank
 
-            if (passMarks == null) {
-                status = "NA"; // No pass criteria set
+            // ⭐ APPLY RULES
+            String status;
+            if (r.getAttendanceStatus() == ExamAttendanceStatus.ABSENT) {
+                status = "ABSENT";
+            } else if (finalTotal >= 36) {
+                status = "PASS";
             } else {
-                status = finalTotal >= passMarks ? "PASS" : "FAIL";
+                status = "FAIL";
             }
 
             subjects.add(
@@ -227,12 +243,14 @@ public class ExamService {
                             .subjectTotalObtained(finalTotal)
                             .subjectTotalMax(finalMax)
                             .attendanceStatus(r.getAttendanceStatus())
-                            .status(status)      // ⭐ Updated here
+                            .status(status)
                             .build()
             );
         }
 
-        Integer rank = examRecordRepo.calculateRank(examId, classSectionId, studentId);
+        // ⭐ Rank Logic
+        Integer rank = hasZeroSubject ? null :
+                examRecordRepo.calculateRank(examId, classSectionId, studentId);
 
         return StudentExamResultDTO.builder()
                 .examId(examId)
@@ -243,11 +261,12 @@ public class ExamService {
                 .section(records.get(0).getClassSection().getSection())
                 .totalMarksObtained(totalObt)
                 .totalMarksMax(totalMax)
-                .percentage((totalObt / totalMax) * 100)
+                .percentage((totalMax > 0 ? (totalObt / totalMax) * 100 : 0))
                 .rank(rank)
                 .subjects(subjects)
                 .build();
     }
+
 
     public List<StudentExamRecordDTO> getExamRecords(String examId, String classSectionId, String subjectId) {
 
@@ -268,21 +287,20 @@ public class ExamService {
 
     public List<StudentExamResultDTO> getClassExamResults(String examId, String classSectionId) {
 
-        // 1. Fetch all records for this Exam & Class
-        List<ExamRecord> records = examRecordRepo.findByExamIdAndClassSectionId(examId, classSectionId);
+        List<ExamRecord> records =
+                examRecordRepo.findByExamIdAndClassSectionId(examId, classSectionId);
 
         if (records.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // 2. Group Records by Student ID
-        Map<String, List<ExamRecord>> studentRecordsMap = records.stream()
-                .collect(Collectors.groupingBy(ExamRecord::getStudentId));
+        Map<String, List<ExamRecord>> studentRecordsMap =
+                records.stream().collect(Collectors.groupingBy(ExamRecord::getStudentId));
 
         List<StudentExamResultDTO> classResults = new ArrayList<>();
 
-        // 3. Process Each Student
         for (Map.Entry<String, List<ExamRecord>> entry : studentRecordsMap.entrySet()) {
+
             String studentId = entry.getKey();
             List<ExamRecord> myRecords = entry.getValue();
 
@@ -290,11 +308,15 @@ public class ExamService {
             double totalMax = 0;
             List<SubjectResultDTO> subjects = new ArrayList<>();
 
+            boolean hasZeroSubject = false;
+
             Student student = myRecords.get(0).getStudent();
 
             for (ExamRecord r : myRecords) {
+
                 double pObt = r.getPaperObtained() != null ? r.getPaperObtained() : 0;
                 double pTot = r.getPaperTotal() != null ? r.getPaperTotal() : 0;
+
                 double aObt = r.getAssignmentObtained() != null ? r.getAssignmentObtained() : 0;
                 double aTot = r.getAssignmentTotal() != null ? r.getAssignmentTotal() : 0;
 
@@ -303,11 +325,17 @@ public class ExamService {
 
                 totalObtained += subTotal;
                 totalMax += subMax;
-                String status = "FAIL";
-                if (r.getPassMarks() != null && subTotal >= r.getPassMarks()) {
+
+                if (subTotal == 0)
+                    hasZeroSubject = true;
+
+                String status;
+                if (r.getAttendanceStatus() == ExamAttendanceStatus.ABSENT) {
+                    status = "ABSENT";
+                } else if (subTotal >= 36) {
                     status = "PASS";
-                } else if (r.getPassMarks() == null) {
-                    status = (subTotal / subMax >= 0.35) ? "PASS" : "FAIL";
+                } else {
+                    status = "FAIL";
                 }
 
                 subjects.add(SubjectResultDTO.builder()
@@ -327,21 +355,35 @@ public class ExamService {
             double percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
 
             classResults.add(StudentExamResultDTO.builder()
+                    .examId(examId)
                     .studentId(studentId)
                     .studentName(student.getFullName())
-                    .rollNumber(student.getRollNumber()) // Make sure to add this field to DTO if needed
+                    .rollNumber(student.getRollNumber())
                     .totalMarksObtained(totalObtained)
                     .totalMarksMax(totalMax)
                     .percentage(percentage)
                     .subjects(subjects)
+                    .rank(null)  // temporarily
                     .build());
         }
 
-        classResults.sort((a, b) -> Double.compare(b.getTotalMarksObtained(), a.getTotalMarksObtained()));
+        // ⭐ Sort by total marks
+        classResults.sort((a, b) ->
+                Double.compare(b.getTotalMarksObtained(), a.getTotalMarksObtained()));
 
+        // ⭐ Rank assignment (skip zero subject)
         int rank = 1;
+
         for (StudentExamResultDTO dto : classResults) {
-            dto.setRank(rank++);
+
+            boolean hasZero = dto.getSubjects().stream()
+                    .anyMatch(sub -> sub.getSubjectTotalObtained() == 0);
+
+            if (hasZero) {
+                dto.setRank(null);
+            } else {
+                dto.setRank(rank++);
+            }
         }
 
         return classResults;

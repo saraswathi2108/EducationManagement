@@ -202,6 +202,82 @@ public class AttendanceService {
 
         return response;
     }
+    public AttendanceViewDTO getAttendanceForAcademicYear(String studentId, int startYear) {
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
+
+        // ⭐ Academic Year: June (startYear) → April (startYear + 1)
+        LocalDate start = LocalDate.of(startYear, 6, 1);
+        LocalDate end = LocalDate.of(startYear + 1, 4, 30);
+
+        // Fetch all attendance between academic dates
+        List<StudentAttendance> attendanceList =
+                attendanceRepository.findByStudentIdAndDateBetween(studentId, start, end);
+
+        Map<LocalDate, String> attendanceMap = attendanceList.stream()
+                .collect(Collectors.toMap(
+                        StudentAttendance::getDate,
+                        a -> a.getStatus().trim().toUpperCase(),
+                        (s1, s2) -> s1
+                ));
+
+        // Fetch all holidays in academic range
+        List<Holiday> holidayList = holidayRepository.findByDateBetween(start, end);
+        Set<LocalDate> holidayDates = holidayList.stream()
+                .map(Holiday::getDate)
+                .collect(Collectors.toSet());
+
+        int present = 0;
+        int absent = 0;
+        int holidayCount = 0;
+
+        List<AttendanceViewDTO.Daily> dailyList = new ArrayList<>();
+
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+
+            String status;
+
+            if (date.getDayOfWeek() == DayOfWeek.SUNDAY) {
+                status = "HOLIDAY";
+                holidayCount++;
+            }
+            else if (holidayDates.contains(date)) {
+                status = "HOLIDAY";
+                holidayCount++;
+            }
+            else if (attendanceMap.containsKey(date)) {
+                String val = attendanceMap.get(date);
+
+                if (val.equals("P") || val.equals("PRESENT") || val.equals("PR")) {
+                    present++;
+                    status = "PRESENT";
+                } else if (val.equals("A") || val.equals("AB") || val.equals("ABSENT")) {
+                    absent++;
+                    status = "ABSENT";
+                } else {
+                    status = "NOT_MARKED";
+                }
+            }
+            else {
+                status = "NOT_MARKED";
+            }
+
+            dailyList.add(new AttendanceViewDTO.Daily(date, status));
+        }
+
+        double workingDays = present + absent;
+        double percentage = workingDays == 0 ? 0 : (present * 100.0) / workingDays;
+
+        return AttendanceViewDTO.builder()
+                .studentId(studentId)
+                .present(present)
+                .absent(absent)
+                .holidays(holidayCount)
+                .percentage(percentage)
+                .dailyRecords(dailyList)
+                .build();
+    }
 
 
 }

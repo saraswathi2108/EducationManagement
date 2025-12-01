@@ -63,6 +63,17 @@ public class AttendanceController {
                 attendanceService.getClassAttendanceForDate(classSectionId, parsedDate)
         );
     }
+    @PreAuthorize("hasRole('STUDENT')")
+    @GetMapping("/{studentId}/{year}")
+    public ResponseEntity<AttendanceViewDTO> getAttendanceAcademicYear(
+            @PathVariable String studentId,
+            @PathVariable int year) {
+
+        return ResponseEntity.ok(
+                attendanceService.getAttendanceForAcademicYear(studentId, year)
+        );
+    }
+
 
 
 }
