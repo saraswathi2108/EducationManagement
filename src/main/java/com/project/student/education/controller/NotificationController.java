@@ -7,6 +7,7 @@ import com.project.student.education.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -36,19 +37,18 @@ public class NotificationController {
     }
 
 
-    // ---------------------------------------------
-    // 2. REAL-TIME SUBSCRIPTION (SSE)
-    // ---------------------------------------------
-    @GetMapping("/subscribe/{receiverId}")
+
+    @GetMapping(
+            value = "/subscribe/{receiverId}",
+            produces = MediaType.TEXT_EVENT_STREAM_VALUE
+    )
     public SseEmitter subscribe(@PathVariable String receiverId) {
         log.info("User subscribed for SSE: {}", receiverId);
         return pushService.subscribe(receiverId);
     }
 
 
-    // ---------------------------------------------
-    // 3. FETCH UNREAD NOTIFICATIONS
-    // ---------------------------------------------
+
     @GetMapping("/unread/{receiverId}")
     public ResponseEntity<List<Notification>> getUnread(
             @PathVariable String receiverId,
@@ -82,9 +82,7 @@ public class NotificationController {
     }
 
 
-    // ---------------------------------------------
-    // 6. STAR & UNSTAR
-    // ---------------------------------------------
+
     @PostMapping("/star/{id}")
     public ResponseEntity<String> star(@PathVariable Long id) {
         notificationService.star(id);
@@ -98,9 +96,7 @@ public class NotificationController {
     }
 
 
-    // ---------------------------------------------
-    // 7. DELETE NOTIFICATION
-    // ---------------------------------------------
+
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> delete(@PathVariable Long id) {
         notificationService.delete(id);
@@ -108,29 +104,31 @@ public class NotificationController {
     }
 
 
-    // ---------------------------------------------
-    // 8. UNREAD COUNT (Bell Icon)
-    // ---------------------------------------------
+
     @GetMapping("/unread-count/{receiverId}")
     public ResponseEntity<Long> unreadCount(@PathVariable String receiverId) {
         return ResponseEntity.ok(notificationService.getUnreadCount(receiverId));
     }
 
 
-    // ---------------------------------------------
-    // 9. CHECK IF USER IS ONLINE (optional)
-    // ---------------------------------------------
+
     @GetMapping("/isOnline/{receiverId}")
     public boolean isOnline(@PathVariable String receiverId) {
         return pushService.isOnline(receiverId);
     }
 
 
-    // ---------------------------------------------
-    // 10. MANUAL UNSUBSCRIBE (optional)
-    // ---------------------------------------------
+
     @GetMapping("/unsubscribe/{receiverId}")
     public String unsubscribe(@PathVariable String receiverId) {
         return pushService.unSubscribe(receiverId);
     }
+
+    @PostMapping("/read-all/{receiverId}")
+    public ResponseEntity<String> markAllRead(@PathVariable String receiverId) {
+        notificationService.markAllRead(receiverId);
+        return ResponseEntity.ok("All marked as read");
+    }
+
 }
+

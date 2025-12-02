@@ -99,4 +99,9 @@ public class NotificationService {
     public List<Notification> getDeleted() {
         return repo.findByDeletedTrue();
     }
+
+    public void markAllRead(String receiverId) {
+        repo.markAllAsRead(receiverId);
+
+    }
 }

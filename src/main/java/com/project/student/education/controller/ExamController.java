@@ -62,7 +62,6 @@ public class ExamController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-
     @PostMapping("/schedule-bulk")
     public ResponseEntity<List<ExamRecordDTO>> scheduleBulk(@RequestBody BulkScheduleRequest req) {
         return ResponseEntity.ok(schedulingService.scheduleBulk(req));

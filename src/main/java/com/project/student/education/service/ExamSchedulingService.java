@@ -87,38 +87,40 @@ public class ExamSchedulingService {
                 throw new EntityNotFoundException("Class not found: " + classId);
             }
 
+            // Check if exam already scheduled for this class-section
+            boolean exists = recordRepo.existsByExamIdAndClassSectionIdAndSubjectId(
+                    req.getExamId(),
+                    classId,
+                    req.getSubjectId()
+            );
+
+            if (exists) continue;
+
+            inserted = true;
+
+            // Create ONE record per class-section
+            ExamRecord record = ExamRecord.builder()
+                    .examId(req.getExamId())
+                    .classSectionId(classId)
+                    .subjectId(req.getSubjectId())
+                    .examDate(req.getExamDate())
+                    .startTime(req.getStartTime())
+                    .endTime(req.getEndTime())
+                    .createdAt(LocalDateTime.now())
+                    .enteredBy(getCurrentUser())
+                    .build();
+
+            ExamRecord saved = recordRepo.save(record);
+            output.add(mapper.map(saved, ExamRecordDTO.class));
+
+            // Notify all students in this class
             List<String> studentIds = studentRepo.findStudentIdsByClassSectionId(classId);
 
-            if (studentIds.isEmpty()) continue;
+            String message = "Exam scheduled for subject " + req.getSubjectId() +
+                    " on " + req.getExamDate() +
+                    " from " + req.getStartTime() + " to " + req.getEndTime() + ".";
 
             for (String studentId : studentIds) {
-
-                boolean exists = recordRepo.existsByExamIdAndClassSectionIdAndSubjectIdAndStudentId(
-                        req.getExamId(), classId, req.getSubjectId(), studentId
-                );
-
-                if (exists) continue;
-
-                inserted = true;
-
-                ExamRecord record = ExamRecord.builder()
-                        .examId(req.getExamId())
-                        .classSectionId(classId)
-                        .subjectId(req.getSubjectId())
-                        .studentId(studentId)
-                        .examDate(req.getExamDate())
-                        .startTime(req.getStartTime())
-                        .endTime(req.getEndTime())
-                        .createdAt(LocalDateTime.now())
-                        .enteredBy(getCurrentUser())
-                        .build();
-
-                ExamRecord saved = recordRepo.save(record);
-                output.add(mapper.map(saved, ExamRecordDTO.class));
-
-                String message = "New exam scheduled for subject " + req.getSubjectId() +
-                        " on " + req.getExamDate() +
-                        " from " + req.getStartTime() + " to " + req.getEndTime() + ".";
                 notificationService.sendNotification(
                         studentId,
                         "Exam Scheduled",
@@ -136,39 +138,42 @@ public class ExamSchedulingService {
     }
 
 
+
     @Transactional(readOnly = true)
     public List<TimetableDayDTO> getTimetable(String examId, String classSectionId) {
 
         List<ExamRecord> records = recordRepo.findByExamIdAndClassSectionId(examId, classSectionId);
+
         Map<LocalDate, TimetableDayDTO> grouped = new LinkedHashMap<>();
 
         for (ExamRecord r : records) {
+
             LocalDate date = r.getExamDate();
-            if (date == null) {
-                continue;
-            }
+            if (date == null) continue;
 
             grouped.computeIfAbsent(date, d -> {
                 TimetableDayDTO dto = new TimetableDayDTO();
                 dto.setExamDate(d);
-                dto.setDayName(d.getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH));
+                dto.setDayName(d.getDayOfWeek().getDisplayName(
+                        java.time.format.TextStyle.FULL, Locale.ENGLISH));
                 dto.setSubjects(new ArrayList<>());
                 return dto;
             });
 
+            // ❌ FIX: Prevent duplicate subjects for same date
+            boolean alreadyExists = grouped.get(date).getSubjects().stream()
+                    .anyMatch(s -> s.getSubjectId().equals(r.getSubjectId()));
+
+            if (alreadyExists) continue;
+
+            // Add new subject once
             TimetableSubjectDTO subjectDTO = new TimetableSubjectDTO();
             subjectDTO.setSubjectId(r.getSubjectId());
-
-            String subjectName = null;
-            if (r.getSubject() != null) {
-                subjectName = r.getSubject().getSubjectName();
-            } else if (r.getSubjectId() != null && subjectRepo != null) {
-                subjectName = subjectRepo.findById(r.getSubjectId())
-                        .map(Subject::getSubjectName)
-                        .orElse(null);
-            }
-            subjectDTO.setSubjectName(subjectName);
-
+            subjectDTO.setSubjectName(
+                    subjectRepo.findById(r.getSubjectId())
+                            .map(Subject::getSubjectName)
+                            .orElse(null)
+            );
             subjectDTO.setStartTime(r.getStartTime() != null ? r.getStartTime().toString() : null);
             subjectDTO.setEndTime(r.getEndTime() != null ? r.getEndTime().toString() : null);
             subjectDTO.setRoomNumber(r.getRoomNumber());
@@ -178,6 +183,7 @@ public class ExamSchedulingService {
 
         return new ArrayList<>(grouped.values());
     }
+
 
 
     @Transactional
@@ -322,57 +328,62 @@ public class ExamSchedulingService {
         Teacher teacher = teacherRepo.findByUser_Id(user.getId())
                 .orElseThrow(() -> new RuntimeException("Teacher not found for logged-in user"));
 
-        String teacherId = teacher.getTeacherId();
         List<ClassSubjectMapping> mappings =
-                classSubjectRepo.findByTeacher_TeacherId(teacherId);
+                classSubjectRepo.findByTeacher_TeacherId(teacher.getTeacherId());
 
         if (mappings.isEmpty()) {
             throw new RuntimeException("No subjects assigned to this teacher");
         }
 
-        Map<LocalDate, TimetableDayDTO> map = new LinkedHashMap<>();
+        Map<LocalDate, TimetableDayDTO> grouped = new LinkedHashMap<>();
 
-        for (ClassSubjectMapping m : mappings) {
+        for (ClassSubjectMapping mapping : mappings) {
 
-            String classSectionId = m.getClassSection().getClassSectionId();
-            String subjectId = m.getSubject().getSubjectId();
+            String classSectionId = mapping.getClassSection().getClassSectionId();
+            String subjectId = mapping.getSubject().getSubjectId();
 
-            List<ExamRecord> subjectRecords =
+            List<ExamRecord> records =
                     recordRepo.findByExamIdAndClassSectionIdAndSubjectId(
                             examId, classSectionId, subjectId
                     );
 
-            for (ExamRecord r : subjectRecords) {
+            for (ExamRecord r : records) {
 
-                LocalDate examDate = r.getExamDate();
-                if (examDate == null) continue;
+                LocalDate date = r.getExamDate();
+                if (date == null) continue;
 
-                map.computeIfAbsent(examDate, d -> {
+                grouped.computeIfAbsent(date, d -> {
                     TimetableDayDTO dto = new TimetableDayDTO();
                     dto.setExamDate(d);
                     dto.setDayName(d.getDayOfWeek().name());
-                    dto.setClassName(m.getClassSection().getClassName());
-                    dto.setSectionName(m.getClassSection().getSection());
+                    dto.setClassName(mapping.getClassSection().getClassName());
+                    dto.setSectionName(mapping.getClassSection().getSection());
                     dto.setSubjects(new ArrayList<>());
                     return dto;
                 });
 
-                TimetableSubjectDTO subDto = new TimetableSubjectDTO();
-                subDto.setSubjectId(r.getSubjectId());
-                subDto.setSubjectName(r.getSubject().getSubjectName());
-                subDto.setStartTime(r.getStartTime().toString());
-                subDto.setEndTime(r.getEndTime().toString());
-                subDto.setRoomNumber(r.getRoomNumber());
-                if (r.getClassSection() != null) {
-                    subDto.setClassName(r.getClassSection().getClassName());
-                    subDto.setSectionName(r.getClassSection().getSection());
-                }
-                map.get(examDate).getSubjects().add(subDto);
+                // ❌ Prevent duplicate subject entries for teacher timetable
+                boolean subjectExists = grouped.get(date).getSubjects().stream()
+                        .anyMatch(s -> s.getSubjectId().equals(subjectId));
+
+                if (subjectExists) continue;
+
+                TimetableSubjectDTO sub = new TimetableSubjectDTO();
+                sub.setSubjectId(r.getSubjectId());
+                sub.setSubjectName(r.getSubject().getSubjectName());
+                sub.setStartTime(r.getStartTime().toString());
+                sub.setEndTime(r.getEndTime().toString());
+                sub.setRoomNumber(r.getRoomNumber());
+                sub.setClassName(mapping.getClassSection().getClassName());
+                sub.setSectionName(mapping.getClassSection().getSection());
+
+                grouped.get(date).getSubjects().add(sub);
             }
         }
 
-        return new ArrayList<>(map.values());
+        return new ArrayList<>(grouped.values());
     }
+
 
 
     private void validateScheduleInput(ExamRecordDTO dto) {
